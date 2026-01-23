@@ -19,7 +19,6 @@ let charIndex = 0;
 let deathTime = 0;
 let highScore = localStorage.getItem("pixelDash_highScore") || 0;
 
-// 궁극기 시스템 변수
 let energy = 0;
 let ultActive = false;
 let ultTimer = 0;
@@ -65,6 +64,7 @@ function playSound(type) {
   osc.stop(audioCtx.currentTime + 0.3);
 }
 
+/** 캐릭터 드로잉: 상태별 반짝임 구분 **/
 function drawBird() {
   const { x, y, width: w, height: h, animal, velocity } = bird;
   let rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 8, velocity * 0.1));
@@ -74,8 +74,19 @@ function drawBird() {
   ctx.rotate(rotation);
   ctx.scale(-1, 1);
 
-  if (ultActive || commonInvincibility > 0) {
-    const blink = Math.floor(Date.now() / 100) % 2 === 0;
+  const blink = Math.floor(Date.now() / 100) % 2 === 0;
+
+  // 1. 공통 무적 상태 (붉은색 반짝임) - 최우선 순위
+  if (commonInvincibility > 0) {
+    if (blink) {
+      ctx.filter =
+        "brightness(1.5) sepia(1) hue-rotate(-50deg) saturate(5) drop-shadow(0 0 10px red)";
+    } else {
+      ctx.filter = "brightness(1.1) drop-shadow(0 0 5px white)";
+    }
+  }
+  // 2. 궁극기 활성화 상태 (황금색 반짝임)
+  else if (ultActive) {
     if (blink) {
       ctx.filter = "brightness(2) saturate(2) drop-shadow(0 0 10px gold)";
     } else {
@@ -145,6 +156,7 @@ function updateLogic() {
   bird.velocity += bird.gravity;
   bird.y += bird.velocity;
 
+  // 무적 판정: chick 궁극기(항시 무적) OR 모든 캐릭터 공통 1초 무적
   const isInvincible =
     (ultActive && bird.animal === "chick") || commonInvincibility > 0;
 
@@ -157,10 +169,7 @@ function updateLogic() {
   }
 
   const speed = (3 + level * 0.5) * speedMultiplier;
-
-  // 가로 간격 완화 로직 수정
-  const baseHorizontalDist = 375; // 시작 간격
-  // 감소폭을 2.5에서 1.2로 줄여 훨씬 천천히 좁아지게 함, 최소 간격은 260px로 설정
+  const baseHorizontalDist = 375;
   const horizontalDist = Math.max(260, baseHorizontalDist - score * 1.2);
 
   if (
@@ -251,7 +260,7 @@ function useUltimate() {
   energy = 0;
   updateEnergyUI();
   ultActive = true;
-  commonInvincibility = 60;
+  commonInvincibility = 60; // 1초간 붉게 반짝이며 무적
   if (bird.animal === "chick") ultTimer = 5 * 60;
   else if (bird.animal === "penguin") ultTimer = 7 * 60;
   else if (bird.animal === "bird") ultTimer = 10 * 60;
