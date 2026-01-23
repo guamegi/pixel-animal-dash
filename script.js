@@ -14,6 +14,8 @@ let charIndex = 0;
 let deathTime = 0;
 
 let audioCtx = null;
+
+/** 1. 오디오 초기화 및 재생 **/
 function initAudio() {
   if (!audioCtx)
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -49,6 +51,7 @@ function playSound(type) {
   osc.stop(audioCtx.currentTime + 0.3);
 }
 
+/** 2. 그래픽 자산 및 드로잉 로직 **/
 const bgAssets = {
   clouds: [
     [50, 80],
@@ -126,35 +129,29 @@ function drawBird() {
   ctx.restore();
 }
 
-// --- 수정된 화살표 모양 UI 드로잉 ---
 function drawArrowUI(text, emoji, showGameOver = false) {
   const tx = canvas.width / 2;
   const ty = canvas.height / 2 + 20;
-  const bw = 180; // 박스 너비
-  const bh = 60; // 박스 높이
+  const bw = 180;
+  const bh = 60;
 
   ctx.save();
   ctx.fillStyle = "rgba(0,0,0,0.3)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // 1. 화살표(말풍선) 그리기
   ctx.fillStyle = "#e67e22";
   ctx.beginPath();
-  // 몸통 박스
   ctx.roundRect(tx - bw / 2, ty, bw, bh, 10);
-  // 위쪽 삼각형 (화살표 촉)
   ctx.moveTo(tx - 20, ty);
   ctx.lineTo(tx, ty - 25);
   ctx.lineTo(tx + 20, ty);
   ctx.fill();
 
-  // 2. 텍스트
   ctx.fillStyle = "white";
   ctx.font = "bold 18px Arial";
   ctx.textAlign = "center";
   ctx.fillText(text, tx, ty + 38);
 
-  // 3. 손가락 이모지 (화살표 끝에 배치)
   ctx.font = "40px Arial";
   ctx.fillText(emoji, tx, ty - 40);
 
@@ -167,6 +164,7 @@ function drawArrowUI(text, emoji, showGameOver = false) {
   ctx.restore();
 }
 
+/** 3. 게임 엔진 로직 **/
 function updateLogic() {
   if (isGameOver) return;
 
@@ -176,7 +174,6 @@ function updateLogic() {
 
   const speed = 3 + level * 0.5;
 
-  // 파이프 생성
   if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 250) {
     const gap = Math.max(120, 180 - level * 10);
     const h = Math.random() * (canvas.height - gap - 150) + 75;
@@ -210,17 +207,11 @@ function updateLogic() {
     if (pipes[i].x + pipes[i].width < -20) pipes.splice(i, 1);
   }
 
-  // --- 별 생성 로직 복구 ---
+  // 별 생성 로직
   if (Math.random() < 0.01 && stars.length < 2) {
     let starX = canvas.width + 50;
     let overlap = pipes.some((p) => starX > p.x - 30 && starX < p.x + 90);
-    if (!overlap) {
-      stars.push({
-        x: starX,
-        y: 150 + Math.random() * 300,
-        active: true,
-      });
-    }
+    if (!overlap) stars.push({ x: starX, y: 150 + Math.random() * 300 });
   }
 
   for (let i = stars.length - 1; i >= 0; i--) {
@@ -236,10 +227,8 @@ function updateLogic() {
       playSound("star");
       stars.splice(i, 1);
       score += 2;
-      scoreEl.innerText = score; // 보너스 점수
-    } else if (stars[i].x < -50) {
-      stars.splice(i, 1);
-    }
+      scoreEl.innerText = score;
+    } else if (stars[i].x < -50) stars.splice(i, 1);
   }
 }
 
@@ -290,24 +279,35 @@ function gameOver() {
   playSound("hit");
 }
 
-function handleAction() {
+/** 4. 이벤트 핸들링 (모바일 반응속도 최적화) **/
+const handleAction = (e) => {
+  if (e.type === "keydown" && e.code !== "Space") return;
+
+  // 브라우저 기본 동작(스크롤, 줌 등) 방지하여 즉각 반응 유도
+  if (e.cancelable) e.preventDefault();
+
+  initAudio();
+
+  const now = Date.now();
   if (isGameOver) {
-    if (Date.now() - deathTime > 2000) {
+    if (now - deathTime > 2000) {
       initGame();
       isReady = true;
     }
     return;
   }
-  initAudio();
+
   if (isReady && !gameActive) {
     gameActive = true;
+    bird.velocity = bird.jump;
     playSound("jump");
   } else if (gameActive) {
     bird.velocity = bird.jump;
     playSound("jump");
   }
-}
+};
 
+// 키보드 이벤트
 window.addEventListener("keydown", (e) => {
   if (!charSelectUI.classList.contains("hidden")) {
     if (e.key === "ArrowRight") updateCharSelection((charIndex + 1) % 4);
@@ -317,10 +317,11 @@ window.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.code === "Space") startGameFlow();
     return;
   }
-  if (e.code === "Space") handleAction();
+  if (e.code === "Space") handleAction(e);
 });
 
-canvas.addEventListener("mousedown", handleAction);
+// 마우스 및 터치 통합 이벤트 (pointerdown은 반응속도가 가장 빠릅니다)
+canvas.addEventListener("pointerdown", handleAction, { passive: false });
 
 function updateCharSelection(index) {
   charIndex = index;
@@ -338,8 +339,18 @@ function startGameFlow() {
   requestAnimationFrame(draw);
 }
 
+// UI 요소들도 pointerdown을 사용하여 반응속도 개선
 charItems.forEach((item, i) =>
-  item.addEventListener("click", () => updateCharSelection(i)),
+  item.addEventListener("pointerdown", (e) => {
+    e.stopPropagation(); // 캔버스의 handleAction 방지
+    updateCharSelection(i);
+  }),
 );
-document.getElementById("confirmBtn").addEventListener("click", startGameFlow);
+
+document.getElementById("confirmBtn").addEventListener("pointerdown", (e) => {
+  e.stopPropagation();
+  startGameFlow();
+});
+
+// 초기 배경 렌더링
 drawBackground();

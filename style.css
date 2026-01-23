@@ -7,17 +7,23 @@ body {
   align-items: center;
   height: 100vh;
   font-family: "Arial", sans-serif;
-}
-#game-container {
-  position: relative;
-  width: 400px;
-  height: 600px;
+  /* 모바일 터치 지연 방지 및 확대 차단 */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 canvas {
   border: 4px solid #333;
   background: #ade1e5;
   display: block;
   image-rendering: pixelated;
+  /* 캔버스 터치 시 브라우저 기본 동작 방지 */
+  touch-action: none;
+}
+#game-container {
+  position: relative;
+  width: 400px;
+  height: 600px;
 }
 #ui-layer {
   position: absolute;
