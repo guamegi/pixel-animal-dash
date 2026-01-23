@@ -120,17 +120,31 @@ function drawPipe(pipe) {
 }
 
 function drawBird() {
-  const { x, y, width: w, height: h, animal } = bird;
+  const { x, y, width: w, height: h, animal, velocity } = bird;
+
+  // 1. 속도에 따른 각도 계산 (올라갈 때 -20도, 내려갈 때 최대 90도까지)
+  // Math.min을 사용하여 바닥으로 추락할 때 너무 심하게 회전하지 않도록 제한합니다.
+  let rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 8, velocity * 0.1));
+
   ctx.save();
+
+  // 2. 캐릭터의 중심으로 캔버스 좌표계 이동
   ctx.translate(x + w / 2, y + h / 2);
+
+  // 3. 계산된 각도만큼 회전
+  ctx.rotate(rotation);
+
   ctx.font = `${w}px Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+
+  // 4. (0, 0) 좌표에 캐릭터 그리기 (이미 translate로 중심을 옮겼기 때문)
   ctx.fillText(
     { chick: "🐥", penguin: "🐧", owl: "🦉", cat: "🐱" }[animal],
     0,
     0,
   );
+
   ctx.restore();
 }
 
