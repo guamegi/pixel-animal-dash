@@ -64,7 +64,7 @@ function playSound(type) {
   osc.stop(audioCtx.currentTime + 0.3);
 }
 
-/** 캐릭터 드로잉: 아이폰/모바일 호환성 강화 버전 **/
+/** 캐릭터 드로잉: 상태별 반짝임 구분 **/
 function drawBird() {
   const { x, y, width: w, height: h, animal, velocity } = bird;
   let rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 8, velocity * 0.1));
@@ -76,39 +76,31 @@ function drawBird() {
 
   const blink = Math.floor(Date.now() / 100) % 2 === 0;
 
-  // 동물 이모지 폰트 설정
+  // 1. 공통 무적 상태 (붉은색 반짝임) - 최우선 순위
+  if (commonInvincibility > 0) {
+    if (blink) {
+      ctx.filter =
+        "brightness(1.5) sepia(1) hue-rotate(-50deg) saturate(5) drop-shadow(0 0 10px red)";
+    } else {
+      ctx.filter = "brightness(1.1) drop-shadow(0 0 5px white)";
+    }
+  }
+  // 2. 궁극기 활성화 상태 (황금색 반짝임)
+  else if (ultActive) {
+    if (blink) {
+      ctx.filter = "brightness(2) saturate(2) drop-shadow(0 0 10px gold)";
+    } else {
+      ctx.filter = "brightness(1.2) drop-shadow(0 0 5px white)";
+    }
+  }
+
   ctx.font = `${w}px Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-
-  // --- 모바일 호환 반짝임 로직 ---
-  if ((commonInvincibility > 0 || ultActive) && blink) {
-    // 1. 먼저 그림자를 그려서 발광 효과(Glow) 유도
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = commonInvincibility > 0 ? "red" : "gold";
-
-    // 2. 캐릭터(이모지) 그리기
-    ctx.fillText(animals[animal], 0, 0);
-
-    // 3. 색상 덮어씌우기 (색상 합성을 통해 붉은색/노란색 필터 효과 재현)
-    ctx.globalCompositeOperation = "source-atop";
-    ctx.fillStyle =
-      commonInvincibility > 0
-        ? "rgba(255, 0, 0, 0.5)"
-        : "rgba(255, 215, 0, 0.5)";
-    ctx.fillRect(-w / 2, -h / 2, w, h);
-
-    // 합성 모드 초기화
-    ctx.globalCompositeOperation = "source-over";
-  } else {
-    // 일반 상태 혹은 깜빡임의 '꺼짐' 상태
-    ctx.fillText(animals[animal], 0, 0);
-  }
-
+  const animals = { chick: "🐤", penguin: "🐧", bird: "🕊️", dog: "🐕" };
+  ctx.fillText(animals[animal], 0, 0);
   ctx.restore();
 }
-
-const animals = { chick: "🐤", penguin: "🐧", bird: "🕊️", dog: "🐕" };
 
 function updateLogic() {
   if (isGameOver) return;
@@ -242,7 +234,7 @@ function updateLogic() {
       stars.splice(i, 1);
       score += 2;
       scoreEl.innerText = score;
-      if (!ultActive) {
+      if (energy < 100) {
         energy = Math.min(100, energy + 10);
         updateEnergyUI();
       }
