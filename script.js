@@ -122,28 +122,35 @@ function drawPipe(pipe) {
 function drawBird() {
   const { x, y, width: w, height: h, animal, velocity } = bird;
 
-  // 1. 속도에 따른 각도 계산 (올라갈 때 -20도, 내려갈 때 최대 90도까지)
-  // Math.min을 사용하여 바닥으로 추락할 때 너무 심하게 회전하지 않도록 제한합니다.
+  // 속도에 따른 회전 각도 계산
   let rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 8, velocity * 0.1));
 
   ctx.save();
 
-  // 2. 캐릭터의 중심으로 캔버스 좌표계 이동
+  // 1. 캐릭터 중심으로 이동
   ctx.translate(x + w / 2, y + h / 2);
 
-  // 3. 계산된 각도만큼 회전
+  // 2. 점프 각도 적용
   ctx.rotate(rotation);
+
+  // 3. 좌우 반전 (기본적으로 왼쪽을 보는 이모지를 오른쪽으로 돌림)
+  // scale(-1, 1)은 X축을 뒤집는 명령입니다.
+  ctx.scale(-1, 1);
 
   ctx.font = `${w}px Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  // 4. (0, 0) 좌표에 캐릭터 그리기 (이미 translate로 중심을 옮겼기 때문)
-  ctx.fillText(
-    { chick: "🐥", penguin: "🐧", owl: "🦉", cat: "🐱" }[animal],
-    0,
-    0,
-  );
+  // 진행 방향(오른쪽)을 바라보기에 적합한 옆모습 이모지들
+  const animals = {
+    chick: "🐤", // 옆모습 새
+    penguin: "🐧", // 펭귄
+    bird: "🕊️", // 날아가는 비둘기
+    dog: "🐕", // 옆모습 강아지
+  };
+
+  // 반전된 상태이므로 (0,0)에 그리면 오른쪽을 보게 됩니다.
+  ctx.fillText(animals[animal], 0, 0);
 
   ctx.restore();
 }
