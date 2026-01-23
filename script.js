@@ -6,7 +6,6 @@ const highScoreEl = document.getElementById("highScore");
 const charSelectUI = document.getElementById("char-select");
 const charItems = document.querySelectorAll(".char-item");
 
-// 궁극기 관련 UI 요소
 const gaugeBar = document.getElementById("gauge-bar");
 const gaugeText = document.getElementById("gauge-text");
 const ultButton = document.getElementById("ult-button");
@@ -24,13 +23,12 @@ let highScore = localStorage.getItem("pixelDash_highScore") || 0;
 let energy = 0;
 let ultActive = false;
 let ultTimer = 0;
+let commonInvincibility = 0; // 공통 무적 타이머 (프레임 단위)
 
-// 초기 최고 점수 표시
 highScoreEl.innerText = highScore;
 
 let audioCtx = null;
 
-/** 1. 오디오 초기화 및 재생 **/
 function initAudio() {
   if (!audioCtx)
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -66,7 +64,6 @@ function playSound(type) {
   osc.stop(audioCtx.currentTime + 0.3);
 }
 
-/** 2. 캐릭터 드로잉 **/
 function drawBird() {
   const { x, y, width: w, height: h, animal, velocity } = bird;
   let rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 8, velocity * 0.1));
@@ -76,23 +73,31 @@ function drawBird() {
   ctx.rotate(rotation);
   ctx.scale(-1, 1);
 
-  if (ultActive && Math.floor(Date.now() / 100) % 2 === 0) {
-    ctx.globalAlpha = 0.3;
+  // 궁극기 활성화 중이거나 공통 무적 시간 동안 반짝임
+  if (ultActive || commonInvincibility > 0) {
+    const blink = Math.floor(Date.now() / 100) % 2 === 0;
+    if (blink) {
+      ctx.filter = "brightness(2) saturate(2) drop-shadow(0 0 10px gold)";
+    } else {
+      ctx.filter = "brightness(1.2) drop-shadow(0 0 5px white)";
+    }
   }
 
   ctx.font = `${w}px Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-
   const animals = { chick: "🐤", penguin: "🐧", bird: "🕊️", dog: "🐕" };
   ctx.fillText(animals[animal], 0, 0);
   ctx.restore();
 }
 
-/** 3. 게임 엔진 로직 **/
 function updateLogic() {
   if (isGameOver) return;
 
+  // 공통 무적 타이머 감소
+  if (commonInvincibility > 0) commonInvincibility--;
+
+  // 궁극기 타이머 관리
   if (ultActive) {
     ultTimer--;
     if (ultTimer <= 0) {
@@ -107,7 +112,9 @@ function updateLogic() {
   bird.velocity += bird.gravity;
   bird.y += bird.velocity;
 
-  const isInvincible = ultActive && bird.animal === "chick";
+  // 무적 상태 판정 (chick 궁극기 OR 모든 캐릭터 공통 1초 무적)
+  const isInvincible =
+    (ultActive && bird.animal === "chick") || commonInvincibility > 0;
 
   if (!isInvincible) {
     if (bird.y + bird.height > canvas.height || bird.y < 0) return gameOver();
@@ -120,7 +127,6 @@ function updateLogic() {
   let speedMultiplier = ultActive && bird.animal === "penguin" ? 0.5 : 1;
   const speed = (3 + level * 0.5) * speedMultiplier;
 
-  // 파이프 가로 간격 계산 (기존 250에서 시작 시 375로 1.5배 증가, 점수 비례 감소)
   const baseHorizontalDist = 375;
   const horizontalDist = Math.max(200, baseHorizontalDist - score * 2.5);
 
@@ -163,7 +169,6 @@ function updateLogic() {
     if (pipes[i].x + pipes[i].width < -20) pipes.splice(i, 1);
   }
 
-  // 별 생성 확률 상향 (기본 0.015, 궁극기 0.023으로 약 1.5배 상향)
   let starProb =
     ultActive && (bird.animal === "bird" || bird.animal === "dog")
       ? 0.023
@@ -178,7 +183,6 @@ function updateLogic() {
     stars[i].x -= speed;
     ctx.font = "30px Arial";
     ctx.fillText("⭐", stars[i].x - 15, stars[i].y + 10);
-
     let dist = Math.sqrt(
       Math.pow(bird.x + bird.width / 2 - stars[i].x, 2) +
         Math.pow(bird.y + bird.height / 2 - stars[i].y, 2),
@@ -196,23 +200,27 @@ function updateLogic() {
   }
 }
 
-/** 4. UI 및 궁극기 **/
 function updateEnergyUI() {
   gaugeBar.style.width = energy + "%";
   if (energy >= 100) {
     gaugeText.innerText = "MAX";
-    ultButton.classList.add("ready");
+    ultButton.classList.add("ready", "ult-ready-animation");
+    gaugeBar.classList.add("ult-ready-animation");
   } else {
     gaugeText.innerText = energy + "%";
-    ultButton.classList.remove("ready");
+    ultButton.classList.remove("ready", "ult-ready-animation");
+    gaugeBar.classList.remove("ult-ready-animation");
   }
 }
 
 function useUltimate() {
   if (energy < 100 || ultActive || isGameOver || !gameActive) return;
+
   energy = 0;
   updateEnergyUI();
   ultActive = true;
+  commonInvincibility = 60; // 1초 공통 무적 부여
+
   if (bird.animal === "chick") ultTimer = 5 * 60;
   else if (bird.animal === "penguin") ultTimer = 7 * 60;
   else if (bird.animal === "bird") ultTimer = 10 * 60;
@@ -284,11 +292,9 @@ function draw() {
   }
   if (bird) drawBird();
   const now = Date.now();
-  if (isReady && !gameActive && !isGameOver) {
-    drawArrowUI("TAP TO START", "☝️");
-  } else if (isGameOver) {
+  if (isReady && !gameActive && !isGameOver) drawArrowUI("TAP TO START", "☝️");
+  else if (isGameOver)
     if (now - deathTime > 2000) drawArrowUI("TAP TO RETRY", "🔄", true);
-  }
   requestAnimationFrame(draw);
 }
 
@@ -296,6 +302,7 @@ function initGame() {
   score = 0;
   level = 1;
   energy = 0;
+  commonInvincibility = 0;
   gameActive = false;
   isGameOver = false;
   ultActive = false;
@@ -330,9 +337,12 @@ function gameOver() {
   }
 }
 
-/** 5. 이벤트 핸들링 **/
 const handleAction = (e) => {
   if (e.type === "keydown" && e.code !== "Space") return;
+
+  // 궁극기 버튼 터치 시 게임 점프 방지
+  if (e.target === ultButton) return;
+
   if (e.cancelable) e.preventDefault();
   initAudio();
   const now = Date.now();
@@ -357,8 +367,6 @@ window.addEventListener("keydown", (e) => {
   if (!charSelectUI.classList.contains("hidden")) {
     if (e.key === "ArrowRight") updateCharSelection((charIndex + 1) % 4);
     if (e.key === "ArrowLeft") updateCharSelection((charIndex + 3) % 4);
-    if (e.key === "ArrowDown" || e.key === "ArrowUp")
-      updateCharSelection((charIndex + 2) % 4);
     if (e.key === "Enter" || e.code === "Space") startGameFlow();
     return;
   }
@@ -366,10 +374,14 @@ window.addEventListener("keydown", (e) => {
 });
 
 canvas.addEventListener("pointerdown", handleAction, { passive: false });
+
+// 궁극기 버튼 전용 리스너
 ultButton.addEventListener(
   "pointerdown",
   (e) => {
-    e.stopPropagation();
+    e.preventDefault();
+    e.stopPropagation(); // 이벤트 전파 중단 (캔버스의 점프 방지)
+    initAudio();
     useUltimate();
   },
   { passive: false },
