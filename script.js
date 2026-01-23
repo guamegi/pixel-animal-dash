@@ -19,11 +19,11 @@ let charIndex = 0;
 let deathTime = 0;
 let highScore = localStorage.getItem("pixelDash_highScore") || 0;
 
-// 궁극기 시스템 변_수
+// 궁극기 시스템 변수
 let energy = 0;
 let ultActive = false;
 let ultTimer = 0;
-let ultTotalStartTime = 0; // 궁극기 시작 시 부여된 총 프레임 수
+let ultTotalStartTime = 0;
 let commonInvincibility = 0;
 
 highScoreEl.innerText = highScore;
@@ -97,47 +97,39 @@ function updateLogic() {
   if (commonInvincibility > 0) commonInvincibility--;
 
   let speedMultiplier = 1;
-  const START_TRANSITION = 60; // 시작 전환 (1초)
-  const END_TRANSITION = 120; // 종료 전환 (2초)
+  const START_TRANSITION = 60;
+  const END_TRANSITION = 120;
 
   if (ultActive) {
     ultTimer--;
-
-    // 현재 궁극기 진행 시간 계산
     const elapsed = ultTotalStartTime - ultTimer;
 
-    // --- 1. Penguin: 점진적 속도 조절 ---
     if (bird.animal === "penguin") {
       if (elapsed < START_TRANSITION) {
-        // 시작 1초: 1.0 -> 0.5 감속
         let progress = elapsed / START_TRANSITION;
         speedMultiplier = 1.0 - 0.5 * progress;
       } else if (ultTimer < END_TRANSITION) {
-        // 종료 2초: 0.5 -> 1.0 가속
         let progress = 1 - ultTimer / END_TRANSITION;
         speedMultiplier = 0.5 + 0.5 * progress;
       } else {
-        speedMultiplier = 0.5; // 중간 구간 고정
+        speedMultiplier = 0.5;
       }
     }
 
-    // --- 2. Dog: 점진적 크기 조절 ---
     if (bird.animal === "dog") {
       if (elapsed < START_TRANSITION) {
-        // 시작 1초: 45 -> 22 축소
         let progress = elapsed / START_TRANSITION;
         let newSize = 45 - 23 * progress;
         bird.width = newSize;
         bird.height = newSize;
       } else if (ultTimer < END_TRANSITION) {
-        // 종료 2초: 22 -> 45 확대
         let progress = 1 - ultTimer / END_TRANSITION;
         let newSize = 22 + 23 * progress;
         bird.width = newSize;
         bird.height = newSize;
       } else {
         bird.width = 22;
-        bird.height = 22; // 중간 구간 고정
+        bird.height = 22;
       }
     }
 
@@ -165,8 +157,11 @@ function updateLogic() {
   }
 
   const speed = (3 + level * 0.5) * speedMultiplier;
-  const baseHorizontalDist = 375;
-  const horizontalDist = Math.max(200, baseHorizontalDist - score * 2.5);
+
+  // 가로 간격 완화 로직 수정
+  const baseHorizontalDist = 375; // 시작 간격
+  // 감소폭을 2.5에서 1.2로 줄여 훨씬 천천히 좁아지게 함, 최소 간격은 260px로 설정
+  const horizontalDist = Math.max(260, baseHorizontalDist - score * 1.2);
 
   if (
     pipes.length === 0 ||
@@ -253,19 +248,15 @@ function updateEnergyUI() {
 
 function useUltimate() {
   if (energy < 100 || ultActive || isGameOver || !gameActive) return;
-
   energy = 0;
   updateEnergyUI();
   ultActive = true;
-  commonInvincibility = 60; // 1초 공통 무적
-
-  // 캐릭터별 시간 설정
+  commonInvincibility = 60;
   if (bird.animal === "chick") ultTimer = 5 * 60;
   else if (bird.animal === "penguin") ultTimer = 7 * 60;
   else if (bird.animal === "bird") ultTimer = 10 * 60;
   else if (bird.animal === "dog") ultTimer = 10 * 60;
-
-  ultTotalStartTime = ultTimer; // 전체 시작 시간 기록
+  ultTotalStartTime = ultTimer;
 }
 
 function drawBackground() {
@@ -408,7 +399,6 @@ window.addEventListener("keydown", (e) => {
 });
 
 canvas.addEventListener("pointerdown", handleAction, { passive: false });
-
 ultButton.addEventListener(
   "pointerdown",
   (e) => {
