@@ -66,21 +66,16 @@ function playSound(type) {
   osc.stop(audioCtx.currentTime + 0.3);
 }
 
-/** 2. 캐릭터 드로잉 (회전 + 방향 반전 + 궁극기 반짝임) **/
+/** 2. 캐릭터 드로잉 **/
 function drawBird() {
   const { x, y, width: w, height: h, animal, velocity } = bird;
-
-  // 속도에 따른 회전 각도 계산
   let rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 8, velocity * 0.1));
 
   ctx.save();
   ctx.translate(x + w / 2, y + h / 2);
   ctx.rotate(rotation);
-
-  // 좌우 반전: 왼쪽 보는 이모지를 오른쪽으로 돌림
   ctx.scale(-1, 1);
 
-  // 궁극기 사용 시 반짝거리는 효과 (100ms 단위로 깜빡임)
   if (ultActive && Math.floor(Date.now() / 100) % 2 === 0) {
     ctx.globalAlpha = 0.3;
   }
@@ -89,13 +84,7 @@ function drawBird() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  const animals = {
-    chick: "🐤",
-    penguin: "🐧",
-    bird: "🕊️",
-    dog: "🐕",
-  };
-
+  const animals = { chick: "🐤", penguin: "🐧", bird: "🕊️", dog: "🐕" };
   ctx.fillText(animals[animal], 0, 0);
   ctx.restore();
 }
@@ -104,12 +93,10 @@ function drawBird() {
 function updateLogic() {
   if (isGameOver) return;
 
-  // 궁극기 타이머 관리
   if (ultActive) {
     ultTimer--;
     if (ultTimer <= 0) {
       ultActive = false;
-      // 궁극기 종료 시 원래 상태 복구 (dog 크기 등)
       if (bird.animal === "dog") {
         bird.width = 45;
         bird.height = 45;
@@ -120,25 +107,27 @@ function updateLogic() {
   bird.velocity += bird.gravity;
   bird.y += bird.velocity;
 
-  // chick 궁극기: 무적 상태 체크
   const isInvincible = ultActive && bird.animal === "chick";
 
   if (!isInvincible) {
     if (bird.y + bird.height > canvas.height || bird.y < 0) return gameOver();
   } else {
-    // 무적 상태 시 화면 이탈 방지
     if (bird.y < 0) bird.y = 0;
     if (bird.y + bird.height > canvas.height)
       bird.y = canvas.height - bird.height;
   }
 
-  // penguin 궁극기: 게임 속도 50% 감소
   let speedMultiplier = ultActive && bird.animal === "penguin" ? 0.5 : 1;
   const speed = (3 + level * 0.5) * speedMultiplier;
 
-  // 파이프 생성
-  if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 250) {
-    // bird 궁극기: 파이프 간격 1.5배 확장
+  // 파이프 가로 간격 계산 (기존 250에서 시작 시 375로 1.5배 증가, 점수 비례 감소)
+  const baseHorizontalDist = 375;
+  const horizontalDist = Math.max(200, baseHorizontalDist - score * 2.5);
+
+  if (
+    pipes.length === 0 ||
+    pipes[pipes.length - 1].x < canvas.width - horizontalDist
+  ) {
     let gapMultiplier = ultActive && bird.animal === "bird" ? 1.5 : 1;
     const gap = Math.max(100, (180 - level * 10) * gapMultiplier);
     const h = Math.random() * (canvas.height - gap - 150) + 75;
@@ -153,8 +142,6 @@ function updateLogic() {
 
   for (let i = pipes.length - 1; i >= 0; i--) {
     pipes[i].x -= speed;
-
-    // 무적 상태가 아닐 때만 파이프 충돌 체크
     if (!isInvincible) {
       if (
         bird.x < pipes[i].x + pipes[i].width &&
@@ -164,7 +151,6 @@ function updateLogic() {
       )
         return gameOver();
     }
-
     if (!pipes[i].passed && bird.x > pipes[i].x + pipes[i].width) {
       score++;
       scoreEl.innerText = score;
@@ -177,12 +163,12 @@ function updateLogic() {
     if (pipes[i].x + pipes[i].width < -20) pipes.splice(i, 1);
   }
 
-  // 별 생성 (bird, dog 궁극기 시 1.5배 빈도 증가)
+  // 별 생성 확률 상향 (기본 0.015, 궁극기 0.023으로 약 1.5배 상향)
   let starProb =
     ultActive && (bird.animal === "bird" || bird.animal === "dog")
-      ? 0.015
-      : 0.01;
-  if (Math.random() < starProb && stars.length < 3) {
+      ? 0.023
+      : 0.015;
+  if (Math.random() < starProb && stars.length < 4) {
     let starX = canvas.width + 50;
     let overlap = pipes.some((p) => starX > p.x - 30 && starX < p.x + 90);
     if (!overlap) stars.push({ x: starX, y: 150 + Math.random() * 300 });
@@ -197,13 +183,11 @@ function updateLogic() {
       Math.pow(bird.x + bird.width / 2 - stars[i].x, 2) +
         Math.pow(bird.y + bird.height / 2 - stars[i].y, 2),
     );
-    if (dist < bird.width + 10) {
+    if (dist < bird.width + 15) {
       playSound("star");
       stars.splice(i, 1);
       score += 2;
       scoreEl.innerText = score;
-
-      // 게이지 충전 (궁극기 비활성 시에만)
       if (!ultActive) {
         energy = Math.min(100, energy + 10);
         updateEnergyUI();
@@ -212,7 +196,7 @@ function updateLogic() {
   }
 }
 
-/** 4. UI 및 궁극기 제어 **/
+/** 4. UI 및 궁극기 **/
 function updateEnergyUI() {
   gaugeBar.style.width = energy + "%";
   if (energy >= 100) {
@@ -226,21 +210,16 @@ function updateEnergyUI() {
 
 function useUltimate() {
   if (energy < 100 || ultActive || isGameOver || !gameActive) return;
-
   energy = 0;
   updateEnergyUI();
   ultActive = true;
-
-  if (bird.animal === "chick")
-    ultTimer = 5 * 60; // 5초
-  else if (bird.animal === "penguin")
-    ultTimer = 7 * 60; // 7초
-  else if (bird.animal === "bird")
-    ultTimer = 10 * 60; // 10초
+  if (bird.animal === "chick") ultTimer = 5 * 60;
+  else if (bird.animal === "penguin") ultTimer = 7 * 60;
+  else if (bird.animal === "bird") ultTimer = 10 * 60;
   else if (bird.animal === "dog") {
     ultTimer = 10 * 60;
     bird.width = 22;
-    bird.height = 22; // 0.5배 축소
+    bird.height = 22;
   }
 }
 
@@ -269,28 +248,22 @@ function drawBackground() {
 function drawArrowUI(text, emoji, showGameOver = false) {
   const tx = canvas.width / 2;
   const ty = canvas.height / 2 + 20;
-  const bw = 180;
-  const bh = 60;
-
   ctx.save();
   ctx.fillStyle = "rgba(0,0,0,0.3)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
   ctx.fillStyle = "#e67e22";
   ctx.beginPath();
-  ctx.roundRect(tx - bw / 2, ty, bw, bh, 10);
+  ctx.roundRect(tx - 90, ty, 180, 60, 10);
   ctx.moveTo(tx - 20, ty);
   ctx.lineTo(tx, ty - 25);
   ctx.lineTo(tx + 20, ty);
   ctx.fill();
-
   ctx.fillStyle = "white";
   ctx.font = "bold 18px Arial";
   ctx.textAlign = "center";
   ctx.fillText(text, tx, ty + 38);
   ctx.font = "40px Arial";
   ctx.fillText(emoji, tx, ty - 40);
-
   if (showGameOver) {
     ctx.font = "bold 40px Arial";
     ctx.shadowColor = "black";
@@ -310,7 +283,6 @@ function draw() {
     updateLogic();
   }
   if (bird) drawBird();
-
   const now = Date.now();
   if (isReady && !gameActive && !isGameOver) {
     drawArrowUI("TAP TO START", "☝️");
@@ -351,7 +323,6 @@ function gameOver() {
   gameActive = false;
   deathTime = Date.now();
   playSound("hit");
-
   if (score > highScore) {
     highScore = score;
     localStorage.setItem("pixelDash_highScore", highScore);
@@ -361,12 +332,9 @@ function gameOver() {
 
 /** 5. 이벤트 핸들링 **/
 const handleAction = (e) => {
-  // 키보드 스페이스바 또는 화면 터치(pointerdown) 처리
   if (e.type === "keydown" && e.code !== "Space") return;
   if (e.cancelable) e.preventDefault();
-
   initAudio();
-
   const now = Date.now();
   if (isGameOver) {
     if (now - deathTime > 2000) {
@@ -375,7 +343,6 @@ const handleAction = (e) => {
     }
     return;
   }
-
   if (isReady && !gameActive) {
     gameActive = true;
     bird.velocity = bird.jump;
@@ -398,14 +365,11 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Space") handleAction(e);
 });
 
-// 메인 게임 터치 (passive: false는 preventDefault 사용을 위해 필수)
 canvas.addEventListener("pointerdown", handleAction, { passive: false });
-
-// 궁극기 버튼 터치
 ultButton.addEventListener(
   "pointerdown",
   (e) => {
-    e.stopPropagation(); // 캔버스로의 점프 명령 전달 방지
+    e.stopPropagation();
     useUltimate();
   },
   { passive: false },
@@ -427,7 +391,6 @@ function startGameFlow() {
   requestAnimationFrame(draw);
 }
 
-// 초기 선택창 이벤트 (옆모습 이모지)
 charItems.forEach((item, i) =>
   item.addEventListener("pointerdown", (e) => {
     e.stopPropagation();
