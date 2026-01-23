@@ -2,6 +2,7 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const scoreEl = document.getElementById("score");
 const levelEl = document.getElementById("level");
+const highScoreEl = document.getElementById("highScore");
 const charSelectUI = document.getElementById("char-select");
 const charItems = document.querySelectorAll(".char-item");
 
@@ -12,6 +13,10 @@ let score, level, gameActive, isReady, isGameOver, pipes, stars, bird;
 let selectedAnimal = "chick";
 let charIndex = 0;
 let deathTime = 0;
+
+// 로컬 스토리지에서 최고 점수 불러오기
+let highScore = localStorage.getItem("pixelDash_highScore") || 0;
+highScoreEl.innerText = highScore;
 
 let audioCtx = null;
 
@@ -160,6 +165,8 @@ function drawArrowUI(text, emoji, showGameOver = false) {
     ctx.shadowColor = "black";
     ctx.shadowBlur = 4;
     ctx.fillText("GAME OVER", tx, ty - 120);
+    ctx.font = "bold 20px Arial";
+    ctx.fillText(`SCORE: ${score}`, tx, ty - 80);
   }
   ctx.restore();
 }
@@ -207,7 +214,6 @@ function updateLogic() {
     if (pipes[i].x + pipes[i].width < -20) pipes.splice(i, 1);
   }
 
-  // 별 생성 로직
   if (Math.random() < 0.01 && stars.length < 2) {
     let starX = canvas.width + 50;
     let overlap = pipes.some((p) => starX > p.x - 30 && starX < p.x + 90);
@@ -277,13 +283,18 @@ function gameOver() {
   gameActive = false;
   deathTime = Date.now();
   playSound("hit");
+
+  // 최고 점수 갱신 및 로컬 스토리지 저장
+  if (score > highScore) {
+    highScore = score;
+    localStorage.setItem("pixelDash_highScore", highScore);
+    highScoreEl.innerText = highScore;
+  }
 }
 
 /** 4. 이벤트 핸들링 (모바일 반응속도 최적화) **/
 const handleAction = (e) => {
   if (e.type === "keydown" && e.code !== "Space") return;
-
-  // 브라우저 기본 동작(스크롤, 줌 등) 방지하여 즉각 반응 유도
   if (e.cancelable) e.preventDefault();
 
   initAudio();
@@ -307,7 +318,6 @@ const handleAction = (e) => {
   }
 };
 
-// 키보드 이벤트
 window.addEventListener("keydown", (e) => {
   if (!charSelectUI.classList.contains("hidden")) {
     if (e.key === "ArrowRight") updateCharSelection((charIndex + 1) % 4);
@@ -320,7 +330,6 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Space") handleAction(e);
 });
 
-// 마우스 및 터치 통합 이벤트 (pointerdown은 반응속도가 가장 빠릅니다)
 canvas.addEventListener("pointerdown", handleAction, { passive: false });
 
 function updateCharSelection(index) {
@@ -339,10 +348,9 @@ function startGameFlow() {
   requestAnimationFrame(draw);
 }
 
-// UI 요소들도 pointerdown을 사용하여 반응속도 개선
 charItems.forEach((item, i) =>
   item.addEventListener("pointerdown", (e) => {
-    e.stopPropagation(); // 캔버스의 handleAction 방지
+    e.stopPropagation();
     updateCharSelection(i);
   }),
 );
@@ -352,5 +360,4 @@ document.getElementById("confirmBtn").addEventListener("pointerdown", (e) => {
   startGameFlow();
 });
 
-// 초기 배경 렌더링
 drawBackground();
