@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pixel Animal Dash - Final v3</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="game-container">
+      <canvas id="gameCanvas"></canvas>
+      <div id="stats">
+        SCORE: <span id="score">0</span><br />LEVEL: <span id="level">1</span>
+      </div>
+
+      <div id="ui-layer">
+        <div id="char-select">
+          <h2 style="margin: 0">SELECT HERO</h2>
+          <p style="font-size: 12px; margin: 5px 0">
+            Arrows to Move, Space to Start
+          </p>
+          <div class="char-grid" id="charGrid">
+            <div class="char-item selected" data-animal="chick" data-index="0">
+              🐥
+            </div>
+            <div class="char-item" data-animal="penguin" data-index="1">🐧</div>
+            <div class="char-item" data-animal="owl" data-index="2">🦉</div>
+            <div class="char-item" data-animal="cat" data-index="3">🐱</div>
+          </div>
+          <button id="confirmBtn" class="game-btn">START</button>
+        </div>
+      </div>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>
