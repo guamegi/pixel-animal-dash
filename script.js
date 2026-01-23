@@ -19,11 +19,12 @@ let charIndex = 0;
 let deathTime = 0;
 let highScore = localStorage.getItem("pixelDash_highScore") || 0;
 
-// 궁극기 시스템 변수
+// 궁극기 시스템 변_수
 let energy = 0;
 let ultActive = false;
 let ultTimer = 0;
-let commonInvincibility = 0; // 공통 무적 타이머 (프레임 단위)
+let ultTotalStartTime = 0; // 궁극기 시작 시 부여된 총 프레임 수
+let commonInvincibility = 0;
 
 highScoreEl.innerText = highScore;
 
@@ -73,7 +74,6 @@ function drawBird() {
   ctx.rotate(rotation);
   ctx.scale(-1, 1);
 
-  // 궁극기 활성화 중이거나 공통 무적 시간 동안 반짝임
   if (ultActive || commonInvincibility > 0) {
     const blink = Math.floor(Date.now() / 100) % 2 === 0;
     if (blink) {
@@ -94,12 +94,53 @@ function drawBird() {
 function updateLogic() {
   if (isGameOver) return;
 
-  // 공통 무적 타이머 감소
   if (commonInvincibility > 0) commonInvincibility--;
 
-  // 궁극기 타이머 관리
+  let speedMultiplier = 1;
+  const START_TRANSITION = 60; // 시작 전환 (1초)
+  const END_TRANSITION = 120; // 종료 전환 (2초)
+
   if (ultActive) {
     ultTimer--;
+
+    // 현재 궁극기 진행 시간 계산
+    const elapsed = ultTotalStartTime - ultTimer;
+
+    // --- 1. Penguin: 점진적 속도 조절 ---
+    if (bird.animal === "penguin") {
+      if (elapsed < START_TRANSITION) {
+        // 시작 1초: 1.0 -> 0.5 감속
+        let progress = elapsed / START_TRANSITION;
+        speedMultiplier = 1.0 - 0.5 * progress;
+      } else if (ultTimer < END_TRANSITION) {
+        // 종료 2초: 0.5 -> 1.0 가속
+        let progress = 1 - ultTimer / END_TRANSITION;
+        speedMultiplier = 0.5 + 0.5 * progress;
+      } else {
+        speedMultiplier = 0.5; // 중간 구간 고정
+      }
+    }
+
+    // --- 2. Dog: 점진적 크기 조절 ---
+    if (bird.animal === "dog") {
+      if (elapsed < START_TRANSITION) {
+        // 시작 1초: 45 -> 22 축소
+        let progress = elapsed / START_TRANSITION;
+        let newSize = 45 - 23 * progress;
+        bird.width = newSize;
+        bird.height = newSize;
+      } else if (ultTimer < END_TRANSITION) {
+        // 종료 2초: 22 -> 45 확대
+        let progress = 1 - ultTimer / END_TRANSITION;
+        let newSize = 22 + 23 * progress;
+        bird.width = newSize;
+        bird.height = newSize;
+      } else {
+        bird.width = 22;
+        bird.height = 22; // 중간 구간 고정
+      }
+    }
+
     if (ultTimer <= 0) {
       ultActive = false;
       if (bird.animal === "dog") {
@@ -112,7 +153,6 @@ function updateLogic() {
   bird.velocity += bird.gravity;
   bird.y += bird.velocity;
 
-  // 무적 상태 판정 (chick 궁극기 OR 모든 캐릭터 공통 1초 무적)
   const isInvincible =
     (ultActive && bird.animal === "chick") || commonInvincibility > 0;
 
@@ -124,9 +164,7 @@ function updateLogic() {
       bird.y = canvas.height - bird.height;
   }
 
-  let speedMultiplier = ultActive && bird.animal === "penguin" ? 0.5 : 1;
   const speed = (3 + level * 0.5) * speedMultiplier;
-
   const baseHorizontalDist = 375;
   const horizontalDist = Math.max(200, baseHorizontalDist - score * 2.5);
 
@@ -219,16 +257,15 @@ function useUltimate() {
   energy = 0;
   updateEnergyUI();
   ultActive = true;
-  commonInvincibility = 60; // 1초 공통 무적 부여
+  commonInvincibility = 60; // 1초 공통 무적
 
+  // 캐릭터별 시간 설정
   if (bird.animal === "chick") ultTimer = 5 * 60;
   else if (bird.animal === "penguin") ultTimer = 7 * 60;
   else if (bird.animal === "bird") ultTimer = 10 * 60;
-  else if (bird.animal === "dog") {
-    ultTimer = 10 * 60;
-    bird.width = 22;
-    bird.height = 22;
-  }
+  else if (bird.animal === "dog") ultTimer = 10 * 60;
+
+  ultTotalStartTime = ultTimer; // 전체 시작 시간 기록
 }
 
 function drawBackground() {
@@ -339,10 +376,7 @@ function gameOver() {
 
 const handleAction = (e) => {
   if (e.type === "keydown" && e.code !== "Space") return;
-
-  // 궁극기 버튼 터치 시 게임 점프 방지
   if (e.target === ultButton) return;
-
   if (e.cancelable) e.preventDefault();
   initAudio();
   const now = Date.now();
@@ -375,12 +409,11 @@ window.addEventListener("keydown", (e) => {
 
 canvas.addEventListener("pointerdown", handleAction, { passive: false });
 
-// 궁극기 버튼 전용 리스너
 ultButton.addEventListener(
   "pointerdown",
   (e) => {
     e.preventDefault();
-    e.stopPropagation(); // 이벤트 전파 중단 (캔버스의 점프 방지)
+    e.stopPropagation();
     initAudio();
     useUltimate();
   },
