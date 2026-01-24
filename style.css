@@ -159,6 +159,7 @@ canvas {
   background: #ff4757;
   animation: blink 0.5s infinite;
   border-color: #fff;
+  will-change: transform, opacity;
 }
 @keyframes blink {
   0% {

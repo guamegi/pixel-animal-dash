@@ -10,9 +10,12 @@ const gaugeBar = document.getElementById("gauge-bar");
 const gaugeText = document.getElementById("gauge-text");
 const ultButton = document.getElementById("ult-button");
 
-// 게임 내부 논리 해상도 고정
 canvas.width = 400;
 canvas.height = 600;
+
+let lastDisplayedScore = -1;
+let lastDisplayedLevel = -1;
+let lastDisplayedEnergy = -1;
 
 let score, level, gameActive, isReady, isGameOver, pipes, stars, bird;
 let selectedAnimal = "chick";
@@ -27,14 +30,11 @@ let ultTotalStartTime = 0;
 let commonInvincibility = 0;
 
 highScoreEl.innerText = highScore;
-
 let audioCtx = null;
 
-/** 1. 모바일 전체 화면 대응 리사이징 **/
 function resizeCanvas() {
   const windowRatio = window.innerWidth / window.innerHeight;
-  const gameRatio = canvas.width / canvas.height;
-
+  const gameRatio = 400 / 600;
   if (windowRatio < gameRatio) {
     canvas.style.width = "100vw";
     canvas.style.height = "auto";
@@ -43,7 +43,6 @@ function resizeCanvas() {
     canvas.style.height = "100vh";
   }
 }
-
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
@@ -82,7 +81,6 @@ function playSound(type) {
   osc.stop(audioCtx.currentTime + 0.3);
 }
 
-/** 2. 캐릭터 드로잉: 상태 효과 강화 **/
 function drawBird() {
   const { x, y, width: w, height: h, animal, velocity } = bird;
   let rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 8, velocity * 0.1));
@@ -103,7 +101,6 @@ function drawBird() {
     ctx.shadowBlur = 15;
     ctx.shadowColor = commonInvincibility > 0 ? "red" : "gold";
     ctx.fillStyle = auraColor;
-
     if (blink) {
       ctx.arc(0, 0, w * 0.7, 0, Math.PI * 2);
       ctx.fill();
@@ -120,57 +117,36 @@ function drawBird() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   const animals = { chick: "🐤", penguin: "🐧", bird: "🕊️", dog: "🐕" };
-
   ctx.strokeStyle = "rgba(255,255,255,0.8)";
   ctx.lineWidth = 2;
   ctx.strokeText(animals[animal], 0, 0);
   ctx.fillText(animals[animal], 0, 0);
+  ctx.restore();
+}
 
+/** [중요] 선명한 별 그리기 전용 함수 **/
+function drawStars() {
+  ctx.save();
+  ctx.globalAlpha = 1.0;
+  ctx.shadowBlur = 0;
+  ctx.font = "30px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  stars.forEach((s) => {
+    // 좌표를 반올림하여 서브픽셀 렌더링(희미해짐) 방지
+    ctx.fillText("⭐", Math.round(s.x), Math.round(s.y));
+  });
   ctx.restore();
 }
 
 function updateLogic() {
   if (isGameOver) return;
-
   if (commonInvincibility > 0) commonInvincibility--;
 
   let speedMultiplier = 1;
-  const START_TRANSITION = 60;
-  const END_TRANSITION = 120;
-
   if (ultActive) {
     ultTimer--;
-    const elapsed = ultTotalStartTime - ultTimer;
-
-    if (bird.animal === "penguin") {
-      if (elapsed < START_TRANSITION) {
-        let progress = elapsed / START_TRANSITION;
-        speedMultiplier = 1.0 - 0.5 * progress;
-      } else if (ultTimer < END_TRANSITION) {
-        let progress = 1 - ultTimer / END_TRANSITION;
-        speedMultiplier = 0.5 + 0.5 * progress;
-      } else {
-        speedMultiplier = 0.5;
-      }
-    }
-
-    if (bird.animal === "dog") {
-      if (elapsed < START_TRANSITION) {
-        let progress = elapsed / START_TRANSITION;
-        let newSize = 45 - 23 * progress;
-        bird.width = newSize;
-        bird.height = newSize;
-      } else if (ultTimer < END_TRANSITION) {
-        let progress = 1 - ultTimer / END_TRANSITION;
-        let newSize = 22 + 23 * progress;
-        bird.width = newSize;
-        bird.height = newSize;
-      } else {
-        bird.width = 22;
-        bird.height = 22;
-      }
-    }
-
+    if (bird.animal === "penguin") speedMultiplier = 0.5;
     if (ultTimer <= 0) {
       ultActive = false;
       if (bird.animal === "dog") {
@@ -185,7 +161,6 @@ function updateLogic() {
 
   const isInvincible =
     (ultActive && bird.animal === "chick") || commonInvincibility > 0;
-
   if (!isInvincible) {
     if (bird.y + bird.height > canvas.height || bird.y < 0) return gameOver();
   } else {
@@ -195,110 +170,98 @@ function updateLogic() {
   }
 
   const speed = (3 + level * 0.5) * speedMultiplier;
-  const baseHorizontalDist = 375;
-  const horizontalDist = Math.max(260, baseHorizontalDist - score * 1.2);
+  const horizontalDist = Math.max(260, 375 - score * 1.2);
 
   if (
     pipes.length === 0 ||
     pipes[pipes.length - 1].x < canvas.width - horizontalDist
   ) {
-    let gapMultiplier = ultActive && bird.animal === "bird" ? 1.5 : 1;
-    const gap = Math.max(100, (180 - level * 10) * gapMultiplier);
+    const gap = Math.max(
+      120,
+      (180 - level * 10) * (ultActive && bird.animal === "bird" ? 1.5 : 1),
+    );
     const h = Math.random() * (canvas.height - gap - 150) + 75;
     pipes.push({
       x: canvas.width,
       top: h,
       bottom: canvas.height - h - gap,
-      width: 60,
+      width: 65,
       passed: false,
     });
   }
 
   for (let i = pipes.length - 1; i >= 0; i--) {
-    pipes[i].x -= speed;
-    if (!isInvincible) {
-      if (
-        bird.x < pipes[i].x + pipes[i].width &&
-        bird.x + bird.width > pipes[i].x &&
-        (bird.y < pipes[i].top ||
-          bird.y + bird.height > canvas.height - pipes[i].bottom)
-      )
-        return gameOver();
-    }
-    if (!pipes[i].passed && bird.x > pipes[i].x + pipes[i].width) {
+    const p = pipes[i];
+    p.x -= speed;
+    if (
+      !isInvincible &&
+      bird.x < p.x + p.width &&
+      bird.x + bird.width > p.x &&
+      (bird.y < p.top || bird.y + bird.height > canvas.height - p.bottom)
+    )
+      return gameOver();
+    if (!p.passed && bird.x > p.x + p.width) {
       score++;
-      scoreEl.innerText = score;
-      pipes[i].passed = true;
-      if (score > 0 && score % 10 === 0) {
-        level++;
-        levelEl.innerText = level;
-      }
+      if (score > 0 && score % 10 === 0) level++;
+      p.passed = true;
+      updateUI();
     }
-    if (pipes[i].x + pipes[i].width < -20) pipes.splice(i, 1);
+    if (p.x + p.width < -100) pipes.splice(i, 1);
   }
 
-  let starProb =
-    ultActive && (bird.animal === "bird" || bird.animal === "dog")
-      ? 0.023
-      : 0.015;
-  if (Math.random() < starProb && stars.length < 4) {
-    let starX = canvas.width + 50;
-    let overlap = pipes.some((p) => starX > p.x - 30 && starX < p.x + 90);
-    if (!overlap) stars.push({ x: starX, y: 150 + Math.random() * 300 });
+  if (Math.random() < 0.015 && stars.length < 3) {
+    stars.push({ x: canvas.width + 50, y: 150 + Math.random() * 300 });
   }
 
   for (let i = stars.length - 1; i >= 0; i--) {
-    stars[i].x -= speed;
-    ctx.font = "30px Arial";
-    ctx.fillText("⭐", stars[i].x - 15, stars[i].y + 10);
-    let dist = Math.sqrt(
-      Math.pow(bird.x + bird.width / 2 - stars[i].x, 2) +
-        Math.pow(bird.y + bird.height / 2 - stars[i].y, 2),
-    );
-    if (dist < bird.width + 15) {
+    const s = stars[i];
+    s.x -= speed;
+    let dx = bird.x + bird.width / 2 - s.x;
+    let dy = bird.y + bird.height / 2 - s.y;
+    if (Math.sqrt(dx * dx + dy * dy) < bird.width) {
       playSound("star");
       stars.splice(i, 1);
       score += 2;
-      scoreEl.innerText = score;
-      if (energy < 100) {
-        energy = Math.min(100, energy + 10);
-        updateEnergyUI();
-      }
-    } else if (stars[i].x < -50) stars.splice(i, 1);
+      energy = Math.min(100, energy + 10);
+      updateUI();
+    } else if (s.x < -50) stars.splice(i, 1);
   }
 }
 
-/** 3. 게이지 UI 업데이트: 렉 방지를 위해 레이아웃 재계산 최소화 **/
-function updateEnergyUI() {
-  gaugeBar.style.width = energy + "%";
-  if (energy >= 100) {
-    gaugeText.innerText = "MAX";
-    // 끊김 현상 방지를 위해 will-change 속성 활용 가능 (CSS)
-    ultButton.classList.add("ready", "ult-ready-animation");
-    gaugeBar.classList.add("ult-ready-animation");
-  } else {
-    gaugeText.innerText = energy + "%";
-    ultButton.classList.remove("ready", "ult-ready-animation");
-    gaugeBar.classList.remove("ult-ready-animation");
+function updateUI() {
+  if (lastDisplayedScore !== score) {
+    scoreEl.textContent = score;
+    lastDisplayedScore = score;
+  }
+  if (lastDisplayedLevel !== level) {
+    levelEl.textContent = level;
+    lastDisplayedLevel = level;
+  }
+  if (lastDisplayedEnergy !== energy) {
+    gaugeBar.style.width = energy + "%";
+    gaugeText.textContent = energy >= 100 ? "MAX" : energy + "%";
+    if (energy >= 100) ultButton.classList.add("ready", "ult-ready-animation");
+    else ultButton.classList.remove("ready", "ult-ready-animation");
+    lastDisplayedEnergy = energy;
   }
 }
 
 function useUltimate() {
   if (energy < 100 || ultActive || isGameOver || !gameActive) return;
   energy = 0;
-  updateEnergyUI();
+  updateUI();
   ultActive = true;
   commonInvincibility = 60;
-  if (bird.animal === "chick") ultTimer = 5 * 60;
-  else if (bird.animal === "penguin") ultTimer = 7 * 60;
-  else if (bird.animal === "bird") ultTimer = 10 * 60;
-  else if (bird.animal === "dog") ultTimer = 10 * 60;
-  ultTotalStartTime = ultTimer;
+  ultTimer =
+    bird.animal === "chick" ? 300 : bird.animal === "penguin" ? 420 : 600;
 }
 
+/** 구름 렌더링 수정본: 상태 격리 강화 **/
 function drawBackground() {
+  ctx.save();
   ctx.fillStyle = "#ade1e5";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
   bgAssets.buildings.forEach((b) => {
     ctx.fillStyle = b.color;
     ctx.fillRect(b.x, canvas.height - b.h, b.w, b.h);
@@ -307,59 +270,39 @@ function drawBackground() {
       for (let j = 10; j < b.h - 10; j += 30)
         ctx.fillRect(b.x + i, canvas.height - b.h + j, 8, 12);
   });
-  ctx.fillStyle = "white";
+
   bgAssets.clouds.forEach((c) => {
+    const x = c[0],
+      y = c[1];
     ctx.beginPath();
-    ctx.arc(c[0], c[1], 25, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(c[0] + 20, c[1], 20, 0, Math.PI * 2);
+    ctx.arc(x, y, 22, 0, Math.PI * 2);
+    ctx.arc(x - 15, y + 8, 16, 0, Math.PI * 2);
+    ctx.arc(x + 15, y + 8, 16, 0, Math.PI * 2);
+    ctx.arc(x + 8, y - 8, 16, 0, Math.PI * 2);
+    ctx.arc(x - 8, y - 5, 14, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
     ctx.fill();
   });
-}
-
-function drawArrowUI(text, emoji, showGameOver = false) {
-  const tx = canvas.width / 2;
-  const ty = canvas.height / 2 + 20;
-  ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.3)";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#e67e22";
-  ctx.beginPath();
-  ctx.roundRect(tx - 90, ty, 180, 60, 10);
-  ctx.moveTo(tx - 20, ty);
-  ctx.lineTo(tx, ty - 25);
-  ctx.lineTo(tx + 20, ty);
-  ctx.fill();
-  ctx.fillStyle = "white";
-  ctx.font = "bold 18px Arial";
-  ctx.textAlign = "center";
-  ctx.fillText(text, tx, ty + 38);
-  ctx.font = "40px Arial";
-  ctx.fillText(emoji, tx, ty - 40);
-  if (showGameOver) {
-    ctx.font = "bold 40px Arial";
-    ctx.shadowColor = "black";
-    ctx.shadowBlur = 4;
-    ctx.fillText("GAME OVER", tx, ty - 120);
-    ctx.font = "bold 20px Arial";
-    ctx.fillText(`SCORE: ${score}`, tx, ty - 80);
-  }
   ctx.restore();
 }
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawBackground();
+
   if (gameActive || isGameOver) {
     pipes.forEach(drawPipe);
     updateLogic();
+    drawStars(); // 독립된 레이어에서 별 그리기
   }
+
   if (bird) drawBird();
+
   const now = Date.now();
   if (isReady && !gameActive && !isGameOver) drawArrowUI("TAP TO START", "☝️");
-  else if (isGameOver)
-    if (now - deathTime > 2000) drawArrowUI("TAP TO RETRY", "🔄", true);
+  else if (isGameOver && now - deathTime > 2000)
+    drawArrowUI("TAP TO RETRY", "🔄", true);
+
   requestAnimationFrame(draw);
 }
 
@@ -367,7 +310,9 @@ function initGame() {
   score = 0;
   level = 1;
   energy = 0;
-  commonInvincibility = 0;
+  lastDisplayedScore = -1;
+  lastDisplayedLevel = -1;
+  lastDisplayedEnergy = -1;
   gameActive = false;
   isGameOver = false;
   ultActive = false;
@@ -383,9 +328,7 @@ function initGame() {
     jump: -8,
     animal: selectedAnimal,
   };
-  scoreEl.innerText = score;
-  levelEl.innerText = level;
-  updateEnergyUI();
+  updateUI();
   ultButton.style.display = "flex";
 }
 
@@ -407,12 +350,9 @@ const handleAction = (e) => {
   if (e.target === ultButton) return;
   if (e.cancelable) e.preventDefault();
   initAudio();
-  const now = Date.now();
-  if (isGameOver) {
-    if (now - deathTime > 2000) {
-      initGame();
-      isReady = true;
-    }
+  if (isGameOver && Date.now() - deathTime > 2000) {
+    initGame();
+    isReady = true;
     return;
   }
   if (isReady && !gameActive) {
@@ -425,14 +365,12 @@ const handleAction = (e) => {
   }
 };
 
-/** 4. 캐릭터 선택 로직 수정: 상하좌우 모든 방향키 대응 **/
 window.addEventListener("keydown", (e) => {
   if (!charSelectUI.classList.contains("hidden")) {
-    // 그리드 구조 (2x2): 0:🐥, 1:🐧 / 2:🕊️, 3:🐕
     if (e.key === "ArrowRight") updateCharSelection((charIndex + 1) % 4);
     if (e.key === "ArrowLeft") updateCharSelection((charIndex + 3) % 4);
-    if (e.key === "ArrowDown") updateCharSelection((charIndex + 2) % 4);
-    if (e.key === "ArrowUp") updateCharSelection((charIndex + 2) % 4);
+    if (e.key === "ArrowDown" || e.key === "ArrowUp")
+      updateCharSelection((charIndex + 2) % 4);
     if (e.key === "Enter" || e.code === "Space") startGameFlow();
     return;
   }
@@ -467,13 +405,6 @@ function startGameFlow() {
   requestAnimationFrame(draw);
 }
 
-charItems.forEach((item, i) =>
-  item.addEventListener("pointerdown", (e) => {
-    e.stopPropagation();
-    updateCharSelection(i);
-  }),
-);
-
 document.getElementById("confirmBtn").addEventListener("pointerdown", (e) => {
   e.stopPropagation();
   startGameFlow();
@@ -481,10 +412,10 @@ document.getElementById("confirmBtn").addEventListener("pointerdown", (e) => {
 
 const bgAssets = {
   clouds: [
-    [50, 80],
-    [200, 50],
-    [320, 100],
-    [120, 150],
+    [70, 100],
+    [220, 70],
+    [350, 140],
+    [130, 200],
   ],
   buildings: [
     { x: 0, w: 80, h: 150, color: "#95c6cc" },
@@ -494,29 +425,45 @@ const bgAssets = {
   ],
 };
 
-function drawPipe(pipe) {
-  ctx.lineWidth = 4;
+function drawPipe(p) {
+  ctx.save();
+  ctx.lineWidth = 3;
   ctx.strokeStyle = "#000";
-  const drawSinglePipe = (x, y, w, h, isTop) => {
+  const renderSingle = (x, y, w, h, isTop) => {
     ctx.fillStyle = "#73bf2e";
     ctx.fillRect(x, y, w, h);
     ctx.strokeRect(x, y, w, h);
-    const headH = 30;
-    const headW = w + 10;
-    const headX = x - 5;
-    const headY = isTop ? y + h - headH : y;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+    ctx.fillRect(x + 5, y, 6, h);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
+    ctx.fillRect(x + w - 12, y, 8, h);
+    const headX = x - 3,
+      headY = isTop ? y + h - 35 : y,
+      headW = w + 6;
     ctx.fillStyle = "#73bf2e";
-    ctx.fillRect(headX, headY, headW, headH);
-    ctx.strokeRect(headX, headY, headW, headH);
+    ctx.fillRect(headX, headY, headW, 35);
+    ctx.strokeRect(headX, headY, headW, 35);
   };
-  drawSinglePipe(pipe.x, 0, pipe.width, pipe.top, true);
-  drawSinglePipe(
-    pipe.x,
-    canvas.height - pipe.bottom,
-    pipe.width,
-    pipe.bottom,
-    false,
-  );
+  renderSingle(p.x, 0, p.width, p.top, true);
+  renderSingle(p.x, canvas.height - p.bottom, p.width, p.bottom, false);
+  ctx.restore();
+}
+
+function drawArrowUI(text, emoji, showGameOver = false) {
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.4)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "white";
+  ctx.textAlign = "center";
+  ctx.font = "bold 20px Arial";
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 70);
+  ctx.font = "50px Arial";
+  ctx.fillText(emoji, canvas.width / 2, canvas.height / 2 + 20);
+  if (showGameOver) {
+    ctx.font = "bold 40px Arial";
+    ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 80);
+  }
+  ctx.restore();
 }
 
 drawBackground();
