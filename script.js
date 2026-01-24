@@ -29,6 +29,9 @@ let ultTimer = 0;
 let ultTotalStartTime = 0;
 let commonInvincibility = 0;
 
+// 궁극기 사운드 루프용 변수
+let ultAudioInterval = null;
+
 highScoreEl.innerText = highScore;
 let audioCtx = null;
 
@@ -58,6 +61,7 @@ function playSound(type) {
   const gain = audioCtx.createGain();
   osc.connect(gain);
   gain.connect(audioCtx.destination);
+
   if (type === "jump") {
     osc.type = "triangle";
     osc.frequency.setValueAtTime(150, audioCtx.currentTime);
@@ -76,9 +80,43 @@ function playSound(type) {
       audioCtx.currentTime + 0.1,
     );
     gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+  } else if (type === "gem") {
+    // 파란 별 전용 사운드
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(
+      2400,
+      audioCtx.currentTime + 0.15,
+    );
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+  } else if (type === "ult_loop") {
+    // 궁극기 사용 중 배경음
+    osc.type = "square";
+    osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+    osc.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 0.05);
+    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
   }
+
   osc.start();
   osc.stop(audioCtx.currentTime + 0.3);
+}
+
+// 궁극기 사운드 루프 시작
+function startUltSound() {
+  if (ultAudioInterval) clearInterval(ultAudioInterval);
+  ultAudioInterval = setInterval(() => {
+    if (ultActive) playSound("ult_loop");
+    else stopUltSound();
+  }, 150);
+}
+
+// 궁극기 사운드 루프 정지
+function stopUltSound() {
+  if (ultAudioInterval) {
+    clearInterval(ultAudioInterval);
+    ultAudioInterval = null;
+  }
 }
 
 function drawBird() {
@@ -130,7 +168,6 @@ function drawStars() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   stars.forEach((s) => {
-    // 파란별은 파란색 이모지나 효과를 줄 수 있습니다.
     const emoji = s.type === "blue" ? "💎" : "⭐";
     ctx.fillText(emoji, Math.round(s.x), Math.round(s.y));
   });
@@ -147,7 +184,6 @@ function updateLogic() {
   if (ultActive) {
     ultTimer--;
 
-    // 부엉이 대시
     if (bird.animal === "bird") {
       const dashDuration = 30;
       const elapsed = ultTotalStartTime - ultTimer;
@@ -159,7 +195,6 @@ function updateLogic() {
       }
     }
 
-    // 강아지 애니메이션
     if (bird.animal === "dog") {
       const animDuration = 120;
       const originalSize = 45;
@@ -182,6 +217,7 @@ function updateLogic() {
     if (bird.animal === "penguin") speedMultiplier = 0.5;
     if (ultTimer <= 0) {
       ultActive = false;
+      stopUltSound(); // 사운드 중지
       bird.width = 45;
       bird.height = 45;
     }
@@ -202,7 +238,7 @@ function updateLogic() {
   }
 
   const speed = (3 + level * 0.5) * speedMultiplier + dashEffect;
-  const horizontalDist = Math.max(260, 400 - (level - 1) * 40);
+  const horizontalDist = Math.max(260, 500 - (level - 1) * 40);
 
   if (
     pipes.length === 0 ||
@@ -230,20 +266,18 @@ function updateLogic() {
     )
       return gameOver();
 
-    // 점수 및 레벨업 로직 (10점마다 레벨 1 상승)
     if (!p.passed && bird.x > p.x + p.width) {
       score++;
-      level = Math.floor(score / 10) + 1; // 10점당 레벨 계산
+      level = Math.floor(score / 10) + 1;
       p.passed = true;
       updateUI();
     }
     if (p.x + p.width < -100) pipes.splice(i, 1);
   }
 
-  let starProb = 0.5; // 기본 별 생성 확률
+  let starProb = 0.5;
   if (ultActive && bird.animal === "dog") starProb *= 1.5;
   if (Math.random() < starProb && stars.length < 5) {
-    // 8:2 비율로 노란별(yellow) 또는 파란별(blue) 결정
     const type = Math.random() < 0.2 ? "blue" : "yellow";
     stars.push({
       x: canvas.width + 50,
@@ -258,8 +292,8 @@ function updateLogic() {
     let dx = bird.x + bird.width / 2 - s.x;
     let dy = bird.y + bird.height / 2 - s.y;
     if (Math.sqrt(dx * dx + dy * dy) < bird.width) {
-      playSound("star");
-      // 타입에 따라 에너지 증가량 차등 (yellow: 10, blue: 20)
+      // 보석(blue)과 별(yellow) 사운드 구분
+      playSound(s.type === "blue" ? "gem" : "star");
       const gain = s.type === "blue" ? 20 : 10;
       energy = Math.min(100, energy + gain);
       stars.splice(i, 1);
@@ -281,7 +315,6 @@ function updateUI() {
     gaugeBar.style.width = energy + "%";
     gaugeText.textContent = energy >= 100 ? "MAX" : energy + "%";
 
-    // 게이지 색상 변경 로직 추가
     if (energy >= 100) {
       gaugeBar.classList.add("full");
       ultButton.classList.add("ready", "ult-ready-animation");
@@ -298,6 +331,8 @@ function useUltimate() {
   energy = 0;
   updateUI();
   ultActive = true;
+  startUltSound(); // 힘찬 배경 사운드 시작
+
   if (bird.animal === "bird") {
     ultTimer = 30;
   } else {
@@ -311,8 +346,6 @@ function drawBackground() {
   ctx.save();
   ctx.fillStyle = "#ade1e5";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // 빌딩 그리기... (기존과 동일)
   bgAssets.buildings.forEach((b) => {
     ctx.fillStyle = b.color;
     ctx.fillRect(b.x, canvas.height - b.h, b.w, b.h);
@@ -322,13 +355,11 @@ function drawBackground() {
         ctx.fillRect(b.x + i, canvas.height - b.h + j, 8, 12);
   });
 
-  // 구름 그리기 수정 (안쪽이 채워진 흰색 구름)
   bgAssets.clouds.forEach((c) => {
     const x = c[0],
       y = c[1];
     ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
     ctx.beginPath();
-    // 여러 개의 원을 겹쳐 풍성한 구름 표현
     ctx.arc(x, y, 20, 0, Math.PI * 2);
     ctx.arc(x + 15, y - 10, 18, 0, Math.PI * 2);
     ctx.arc(x + 35, y, 20, 0, Math.PI * 2);
@@ -366,6 +397,7 @@ function initGame() {
   isGameOver = false;
   ultActive = false;
   commonInvincibility = 0;
+  stopUltSound(); // 게임 시작 시 혹시 모를 사운드 정지
   pipes = [];
   stars = [];
   bird = {
@@ -387,6 +419,7 @@ function gameOver() {
   isGameOver = true;
   gameActive = false;
   deathTime = Date.now();
+  stopUltSound(); // 게임 오버 시 사운드 정지
   playSound("hit");
   if (score > highScore) {
     highScore = score;
