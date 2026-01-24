@@ -354,8 +354,21 @@ function useUltimate() {
 
 function drawBackground() {
   ctx.save();
-  ctx.fillStyle = "#ade1e5";
+
+  // --- 배경색 결정 (깜빡임 로직) ---
+  if (ultActive) {
+    // 궁극기 사용 중: 요란한 사운드에 맞춰 배경도 무작위 색상으로 깜빡임
+    const hue = Math.floor(Math.random() * 360);
+    // 밝고 강렬한 색상으로 설정 (채도 80%, 밝기 60%)
+    ctx.fillStyle = `hsl(${hue}, 80%, 60%)`;
+  } else {
+    // 일반 상태: 평온한 하늘색
+    ctx.fillStyle = "#ade1e5";
+  }
+
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 빌딩 그리기
   bgAssets.buildings.forEach((b) => {
     ctx.fillStyle = b.color;
     ctx.fillRect(b.x, canvas.height - b.h, b.w, b.h);
@@ -365,10 +378,14 @@ function drawBackground() {
         ctx.fillRect(b.x + i, canvas.height - b.h + j, 8, 12);
   });
 
+  // 구름 그리기
   bgAssets.clouds.forEach((c) => {
     const x = c[0],
       y = c[1];
-    ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+    // 배경이 깜빡일 때 구름이 더 잘 보이도록 투명도 조절
+    ctx.fillStyle = ultActive
+      ? "rgba(255, 255, 255, 0.8)"
+      : "rgba(255, 255, 255, 0.95)";
     ctx.beginPath();
     ctx.arc(x, y, 20, 0, Math.PI * 2);
     ctx.arc(x + 15, y - 10, 18, 0, Math.PI * 2);
@@ -377,6 +394,7 @@ function drawBackground() {
     ctx.arc(x + 5, y + 10, 15, 0, Math.PI * 2);
     ctx.fill();
   });
+
   ctx.restore();
 }
 
