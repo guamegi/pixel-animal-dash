@@ -13,17 +13,25 @@ body {
   -webkit-user-select: none;
 }
 canvas {
+  /* 비율 유지를 위해 max-width/height 설정 */
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain; /* 비율 유지하며 꽉 차게 */
+  /* border: none; */
   border: 4px solid #333;
   background: #ade1e5;
   display: block;
   image-rendering: pixelated;
-  /* 캔버스 터치 시 브라우저 기본 동작 방지 */
   touch-action: none;
 }
 #game-container {
   position: relative;
-  width: 400px;
-  height: 600px;
+  /* 고정 크기 제거, 화면 전체 사용 */
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 #ui-layer {
   position: absolute;
@@ -141,7 +149,10 @@ canvas {
   box-shadow: 0 4px 0 #922b21;
   touch-action: none;
   display: none;
+  font-size: 24px; /* P 글자를 크게 */
+  z-index: 20;
 }
+
 #ult-button.ready {
   background: #ff4757;
   animation: blink 0.5s infinite;
