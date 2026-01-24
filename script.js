@@ -92,10 +92,19 @@ function playSound(type) {
   } else if (type === "ult_loop") {
     // 궁극기 사용 중 배경음
     osc.type = "square";
-    osc.frequency.setValueAtTime(200, audioCtx.currentTime);
-    osc.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 0.05);
-    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+    // 주파수를 아주 넓은 범위에서 무작위로 설정 (요란함의 핵심)
+    const randomFreq = 400 + Math.random() * 1200;
+    osc.frequency.setValueAtTime(randomFreq, audioCtx.currentTime);
+
+    // 소리가 아주 빠르게 위아래로 요동치게 함
+    osc.frequency.exponentialRampToValueAtTime(
+      randomFreq / 2,
+      audioCtx.currentTime + 0.04,
+    );
+
+    gain.gain.setValueAtTime(0.07, audioCtx.currentTime); // 볼륨은 적당히 조절
+    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.05);
   }
 
   osc.start();
@@ -105,10 +114,11 @@ function playSound(type) {
 // 궁극기 사운드 루프 시작
 function startUltSound() {
   if (ultAudioInterval) clearInterval(ultAudioInterval);
+  // 0.15초 -> 0.05초로 변경 (초당 20번의 사운드 발생)
   ultAudioInterval = setInterval(() => {
     if (ultActive) playSound("ult_loop");
     else stopUltSound();
-  }, 150);
+  }, 50);
 }
 
 // 궁극기 사운드 루프 정지
