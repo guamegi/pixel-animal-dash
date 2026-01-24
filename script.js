@@ -161,9 +161,9 @@ function drawBird() {
 
   // 캐릭터 본체의 깜빡임 (투명도 조절)
   // 모든 무적 상태(공통 무적 또는 궁극기 활성화)에서 깜빡임 유지
-  if ((commonInvincibility > 0 || ultActive) && !blink) {
-    ctx.globalAlpha = 0.4;
-  }
+  // if ((commonInvincibility > 0 || ultActive) && !blink) {
+  // ctx.globalAlpha = 0.4;
+  // }
 
   ctx.scale(-1, 1);
   ctx.font = `${w}px Arial`;
@@ -196,6 +196,7 @@ function updateLogic() {
   let speedMultiplier = 1;
   let dashEffect = 0;
 
+  // 궁극기 활성화 로직
   if (ultActive) {
     ultTimer--;
 
@@ -211,7 +212,7 @@ function updateLogic() {
     }
 
     if (bird.animal === "dog") {
-      const animDuration = 120;
+      const animDuration = 120; // 애니메이션 지속 시간 (프레임 수)
       const originalSize = 45;
       const targetSize = originalSize / 2;
       const elapsed = ultTotalStartTime - ultTimer;
@@ -229,7 +230,7 @@ function updateLogic() {
       }
     }
 
-    if (bird.animal === "penguin") speedMultiplier = 0.5;
+    if (bird.animal === "penguin") speedMultiplier = 0.7;
     if (ultTimer <= 0) {
       ultActive = false;
       stopUltSound(); // 사운드 중지
@@ -290,10 +291,10 @@ function updateLogic() {
     if (p.x + p.width < -100) pipes.splice(i, 1);
   }
 
-  let starProb = 0.5;
+  let starProb = 0.015; // 별이 나올 기본 확률
   if (ultActive && bird.animal === "dog") starProb *= 1.5;
   if (Math.random() < starProb && stars.length < 5) {
-    const type = Math.random() < 0.2 ? "blue" : "yellow";
+    const type = Math.random() < 0.1 ? "blue" : "yellow";
     stars.push({
       x: canvas.width + 50,
       y: 150 + Math.random() * 300,
