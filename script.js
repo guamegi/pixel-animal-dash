@@ -142,38 +142,46 @@ function updateLogic() {
   if (commonInvincibility > 0) commonInvincibility--;
 
   let speedMultiplier = 1;
+  let dashEffect = 0;
+
   if (ultActive) {
     ultTimer--;
 
-    // 강아지(dog) 전용 애니메이션 로직
+    // 부엉이 대시
+    if (bird.animal === "bird") {
+      const dashDuration = 30;
+      const elapsed = ultTotalStartTime - ultTimer;
+      if (elapsed < dashDuration) {
+        dashEffect = 15;
+        bird.velocity = 0;
+      } else if (elapsed === dashDuration) {
+        commonInvincibility = 120;
+      }
+    }
+
+    // 강아지 애니메이션
     if (bird.animal === "dog") {
-      const animDuration = 120; // 2초 (60fps 기준)
+      const animDuration = 120;
       const originalSize = 45;
       const targetSize = originalSize / 2;
       const elapsed = ultTotalStartTime - ultTimer;
-
       if (elapsed < animDuration) {
-        // 시작 시 2초간 서서히 작아짐
         const ratio = elapsed / animDuration;
         bird.width = originalSize - (originalSize - targetSize) * ratio;
         bird.height = originalSize - (originalSize - targetSize) * ratio;
       } else if (ultTimer < animDuration) {
-        // 종료 전 2초간 서서히 커짐
         const ratio = (animDuration - ultTimer) / animDuration;
         bird.width = targetSize + (originalSize - targetSize) * ratio;
         bird.height = targetSize + (originalSize - targetSize) * ratio;
       } else {
-        // 중간 유지 상태
         bird.width = targetSize;
         bird.height = targetSize;
       }
     }
 
     if (bird.animal === "penguin") speedMultiplier = 0.5;
-
     if (ultTimer <= 0) {
       ultActive = false;
-      // 모든 캐릭터 크기 초기화
       bird.width = 45;
       bird.height = 45;
     }
@@ -183,7 +191,8 @@ function updateLogic() {
   bird.y += bird.velocity;
 
   const isInvincible =
-    (ultActive && bird.animal === "chick") || commonInvincibility > 0;
+    (ultActive && (bird.animal === "chick" || bird.animal === "bird")) ||
+    commonInvincibility > 0;
   if (!isInvincible) {
     if (bird.y + bird.height > canvas.height || bird.y < 0) return gameOver();
   } else {
@@ -192,17 +201,14 @@ function updateLogic() {
       bird.y = canvas.height - bird.height;
   }
 
-  const speed = (3 + level * 0.5) * speedMultiplier;
-  const horizontalDist = Math.max(260, 375 - score * 1.2);
+  const speed = (3 + level * 0.5) * speedMultiplier + dashEffect;
+  const horizontalDist = Math.max(260, 500 - (level - 1) * 40);
 
   if (
     pipes.length === 0 ||
     pipes[pipes.length - 1].x < canvas.width - horizontalDist
   ) {
-    const gap = Math.max(
-      120,
-      (180 - level * 10) * (ultActive && bird.animal === "bird" ? 1.5 : 1),
-    );
+    const gap = Math.max(120, 180 - level * 10);
     const h = Math.random() * (canvas.height - gap - 150) + 75;
     pipes.push({
       x: canvas.width,
@@ -223,19 +229,19 @@ function updateLogic() {
       (bird.y < p.top || bird.y + bird.height > canvas.height - p.bottom)
     )
       return gameOver();
+
+    // 점수 및 레벨업 로직 (10점마다 레벨 1 상승)
     if (!p.passed && bird.x > p.x + p.width) {
       score++;
-      if (score > 0 && score % 10 === 0) level++;
+      level = Math.floor(score / 10) + 1; // 10점당 레벨 계산
       p.passed = true;
       updateUI();
     }
     if (p.x + p.width < -100) pipes.splice(i, 1);
   }
 
-  // 별 생성 확률 조절 (강아지 궁극기 시 1.5배)
-  let starProb = 0.1;
+  let starProb = 0.5;
   if (ultActive && bird.animal === "dog") starProb *= 1.5;
-
   if (Math.random() < starProb && stars.length < 5) {
     stars.push({ x: canvas.width + 50, y: 150 + Math.random() * 300 });
   }
@@ -248,7 +254,7 @@ function updateLogic() {
     if (Math.sqrt(dx * dx + dy * dy) < bird.width) {
       playSound("star");
       stars.splice(i, 1);
-      score += 2;
+      // [수정] 별 습득 시 점수는 오르지 않고 에너지만 10 증가
       energy = Math.min(100, energy + 10);
       updateUI();
     } else if (s.x < -50) stars.splice(i, 1);
@@ -278,10 +284,12 @@ function useUltimate() {
   energy = 0;
   updateUI();
   ultActive = true;
-  commonInvincibility = 60;
-  // 강아지는 10초(600프레임), 나머지는 기존 유지
-  ultTimer =
-    bird.animal === "chick" ? 300 : bird.animal === "penguin" ? 420 : 600;
+  if (bird.animal === "bird") {
+    ultTimer = 30;
+  } else {
+    ultTimer =
+      bird.animal === "chick" ? 300 : bird.animal === "penguin" ? 420 : 600;
+  }
   ultTotalStartTime = ultTimer;
 }
 
@@ -289,7 +297,6 @@ function drawBackground() {
   ctx.save();
   ctx.fillStyle = "#ade1e5";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
   bgAssets.buildings.forEach((b) => {
     ctx.fillStyle = b.color;
     ctx.fillRect(b.x, canvas.height - b.h, b.w, b.h);
@@ -298,7 +305,6 @@ function drawBackground() {
       for (let j = 10; j < b.h - 10; j += 30)
         ctx.fillRect(b.x + i, canvas.height - b.h + j, 8, 12);
   });
-
   bgAssets.clouds.forEach((c) => {
     const x = c[0],
       y = c[1];
@@ -317,20 +323,16 @@ function drawBackground() {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawBackground();
-
   if (gameActive || isGameOver) {
     pipes.forEach(drawPipe);
     updateLogic();
     drawStars();
   }
-
   if (bird) drawBird();
-
   const now = Date.now();
   if (isReady && !gameActive && !isGameOver) drawArrowUI("TAP TO START", "☝️");
   else if (isGameOver && now - deathTime > 2000)
     drawArrowUI("TAP TO RETRY", "🔄", true);
-
   requestAnimationFrame(draw);
 }
 
@@ -344,6 +346,7 @@ function initGame() {
   gameActive = false;
   isGameOver = false;
   ultActive = false;
+  commonInvincibility = 0;
   pipes = [];
   stars = [];
   bird = {
@@ -405,11 +408,9 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Space") handleAction(e);
 });
 
-// 캐릭터 마우스 클릭 선택 기능 추가
 charItems.forEach((item) => {
   item.addEventListener("pointerdown", (e) => {
-    const index = parseInt(item.getAttribute("data-index"));
-    updateCharSelection(index);
+    updateCharSelection(parseInt(item.getAttribute("data-index")));
   });
 });
 
@@ -429,9 +430,7 @@ function updateCharSelection(index) {
   charIndex = index;
   charItems.forEach((item, i) => {
     item.classList.toggle("selected", i === charIndex);
-    if (i === charIndex) {
-      selectedAnimal = item.dataset.animal;
-    }
+    if (i === charIndex) selectedAnimal = item.dataset.animal;
   });
 }
 
@@ -503,5 +502,4 @@ function drawArrowUI(text, emoji, showGameOver = false) {
   }
   ctx.restore();
 }
-
 drawBackground();
