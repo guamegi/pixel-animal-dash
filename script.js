@@ -126,13 +126,13 @@ function drawBird() {
 
 function drawStars() {
   ctx.save();
-  ctx.globalAlpha = 1.0;
-  ctx.shadowBlur = 0;
   ctx.font = "30px Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   stars.forEach((s) => {
-    ctx.fillText("⭐", Math.round(s.x), Math.round(s.y));
+    // 파란별은 파란색 이모지나 효과를 줄 수 있습니다.
+    const emoji = s.type === "blue" ? "💎" : "⭐";
+    ctx.fillText(emoji, Math.round(s.x), Math.round(s.y));
   });
   ctx.restore();
 }
@@ -240,10 +240,16 @@ function updateLogic() {
     if (p.x + p.width < -100) pipes.splice(i, 1);
   }
 
-  let starProb = 0.5;
+  let starProb = 0.5; // 기본 별 생성 확률
   if (ultActive && bird.animal === "dog") starProb *= 1.5;
   if (Math.random() < starProb && stars.length < 5) {
-    stars.push({ x: canvas.width + 50, y: 150 + Math.random() * 300 });
+    // 8:2 비율로 노란별(yellow) 또는 파란별(blue) 결정
+    const type = Math.random() < 0.2 ? "blue" : "yellow";
+    stars.push({
+      x: canvas.width + 50,
+      y: 150 + Math.random() * 300,
+      type: type,
+    });
   }
 
   for (let i = stars.length - 1; i >= 0; i--) {
@@ -253,9 +259,10 @@ function updateLogic() {
     let dy = bird.y + bird.height / 2 - s.y;
     if (Math.sqrt(dx * dx + dy * dy) < bird.width) {
       playSound("star");
+      // 타입에 따라 에너지 증가량 차등 (yellow: 10, blue: 20)
+      const gain = s.type === "blue" ? 20 : 10;
+      energy = Math.min(100, energy + gain);
       stars.splice(i, 1);
-      // [수정] 별 습득 시 점수는 오르지 않고 에너지만 10 증가
-      energy = Math.min(100, energy + 10);
       updateUI();
     } else if (s.x < -50) stars.splice(i, 1);
   }
@@ -273,8 +280,15 @@ function updateUI() {
   if (lastDisplayedEnergy !== energy) {
     gaugeBar.style.width = energy + "%";
     gaugeText.textContent = energy >= 100 ? "MAX" : energy + "%";
-    if (energy >= 100) ultButton.classList.add("ready", "ult-ready-animation");
-    else ultButton.classList.remove("ready", "ult-ready-animation");
+
+    // 게이지 색상 변경 로직 추가
+    if (energy >= 100) {
+      gaugeBar.classList.add("full");
+      ultButton.classList.add("ready", "ult-ready-animation");
+    } else {
+      gaugeBar.classList.remove("full");
+      ultButton.classList.remove("ready", "ult-ready-animation");
+    }
     lastDisplayedEnergy = energy;
   }
 }
@@ -297,6 +311,8 @@ function drawBackground() {
   ctx.save();
   ctx.fillStyle = "#ade1e5";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 빌딩 그리기... (기존과 동일)
   bgAssets.buildings.forEach((b) => {
     ctx.fillStyle = b.color;
     ctx.fillRect(b.x, canvas.height - b.h, b.w, b.h);
@@ -305,16 +321,19 @@ function drawBackground() {
       for (let j = 10; j < b.h - 10; j += 30)
         ctx.fillRect(b.x + i, canvas.height - b.h + j, 8, 12);
   });
+
+  // 구름 그리기 수정 (안쪽이 채워진 흰색 구름)
   bgAssets.clouds.forEach((c) => {
     const x = c[0],
       y = c[1];
+    ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
     ctx.beginPath();
-    ctx.arc(x, y, 22, 0, Math.PI * 2);
-    ctx.arc(x - 15, y + 8, 16, 0, Math.PI * 2);
-    ctx.arc(x + 15, y + 8, 16, 0, Math.PI * 2);
-    ctx.arc(x + 8, y - 8, 16, 0, Math.PI * 2);
-    ctx.arc(x - 8, y - 5, 14, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+    // 여러 개의 원을 겹쳐 풍성한 구름 표현
+    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.arc(x + 15, y - 10, 18, 0, Math.PI * 2);
+    ctx.arc(x + 35, y, 20, 0, Math.PI * 2);
+    ctx.arc(x + 20, y + 10, 15, 0, Math.PI * 2);
+    ctx.arc(x + 5, y + 10, 15, 0, Math.PI * 2);
     ctx.fill();
   });
   ctx.restore();
