@@ -124,7 +124,6 @@ function drawBird() {
   ctx.restore();
 }
 
-/** [중요] 선명한 별 그리기 전용 함수 **/
 function drawStars() {
   ctx.save();
   ctx.globalAlpha = 1.0;
@@ -133,7 +132,6 @@ function drawStars() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   stars.forEach((s) => {
-    // 좌표를 반올림하여 서브픽셀 렌더링(희미해짐) 방지
     ctx.fillText("⭐", Math.round(s.x), Math.round(s.y));
   });
   ctx.restore();
@@ -146,13 +144,38 @@ function updateLogic() {
   let speedMultiplier = 1;
   if (ultActive) {
     ultTimer--;
+
+    // 강아지(dog) 전용 애니메이션 로직
+    if (bird.animal === "dog") {
+      const animDuration = 120; // 2초 (60fps 기준)
+      const originalSize = 45;
+      const targetSize = originalSize / 2;
+      const elapsed = ultTotalStartTime - ultTimer;
+
+      if (elapsed < animDuration) {
+        // 시작 시 2초간 서서히 작아짐
+        const ratio = elapsed / animDuration;
+        bird.width = originalSize - (originalSize - targetSize) * ratio;
+        bird.height = originalSize - (originalSize - targetSize) * ratio;
+      } else if (ultTimer < animDuration) {
+        // 종료 전 2초간 서서히 커짐
+        const ratio = (animDuration - ultTimer) / animDuration;
+        bird.width = targetSize + (originalSize - targetSize) * ratio;
+        bird.height = targetSize + (originalSize - targetSize) * ratio;
+      } else {
+        // 중간 유지 상태
+        bird.width = targetSize;
+        bird.height = targetSize;
+      }
+    }
+
     if (bird.animal === "penguin") speedMultiplier = 0.5;
+
     if (ultTimer <= 0) {
       ultActive = false;
-      if (bird.animal === "dog") {
-        bird.width = 45;
-        bird.height = 45;
-      }
+      // 모든 캐릭터 크기 초기화
+      bird.width = 45;
+      bird.height = 45;
     }
   }
 
@@ -209,7 +232,11 @@ function updateLogic() {
     if (p.x + p.width < -100) pipes.splice(i, 1);
   }
 
-  if (Math.random() < 0.015 && stars.length < 3) {
+  // 별 생성 확률 조절 (강아지 궁극기 시 1.5배)
+  let starProb = 0.1;
+  if (ultActive && bird.animal === "dog") starProb *= 1.5;
+
+  if (Math.random() < starProb && stars.length < 5) {
     stars.push({ x: canvas.width + 50, y: 150 + Math.random() * 300 });
   }
 
@@ -252,11 +279,12 @@ function useUltimate() {
   updateUI();
   ultActive = true;
   commonInvincibility = 60;
+  // 강아지는 10초(600프레임), 나머지는 기존 유지
   ultTimer =
     bird.animal === "chick" ? 300 : bird.animal === "penguin" ? 420 : 600;
+  ultTotalStartTime = ultTimer;
 }
 
-/** 구름 렌더링 수정본: 상태 격리 강화 **/
 function drawBackground() {
   ctx.save();
   ctx.fillStyle = "#ade1e5";
@@ -293,7 +321,7 @@ function draw() {
   if (gameActive || isGameOver) {
     pipes.forEach(drawPipe);
     updateLogic();
-    drawStars(); // 독립된 레이어에서 별 그리기
+    drawStars();
   }
 
   if (bird) drawBird();
@@ -377,6 +405,14 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Space") handleAction(e);
 });
 
+// 캐릭터 마우스 클릭 선택 기능 추가
+charItems.forEach((item) => {
+  item.addEventListener("pointerdown", (e) => {
+    const index = parseInt(item.getAttribute("data-index"));
+    updateCharSelection(index);
+  });
+});
+
 canvas.addEventListener("pointerdown", handleAction, { passive: false });
 ultButton.addEventListener(
   "pointerdown",
@@ -393,7 +429,9 @@ function updateCharSelection(index) {
   charIndex = index;
   charItems.forEach((item, i) => {
     item.classList.toggle("selected", i === charIndex);
-    if (i === charIndex) selectedAnimal = item.dataset.animal;
+    if (i === charIndex) {
+      selectedAnimal = item.dataset.animal;
+    }
   });
 }
 
