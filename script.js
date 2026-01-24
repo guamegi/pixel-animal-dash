@@ -169,7 +169,7 @@ function drawBird() {
   ctx.font = `${w}px Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  const animals = { chick: "🐤", penguin: "🐧", bird: "🕊️", dog: "🐕" };
+  const animals = { chick: "🐤", penguin: "🐧", bird: "🕊️", bee: "🐝" };
   ctx.strokeStyle = "rgba(255,255,255,0.8)";
   ctx.lineWidth = 2;
   ctx.strokeText(animals[animal], 0, 0);
@@ -211,7 +211,7 @@ function updateLogic() {
       }
     }
 
-    if (bird.animal === "dog") {
+    if (bird.animal === "bee") {
       const animDuration = 120; // 애니메이션 지속 시간 (프레임 수)
       const originalSize = 45;
       const targetSize = originalSize / 2;
@@ -292,7 +292,7 @@ function updateLogic() {
   }
 
   let starProb = 0.015; // 별이 나올 기본 확률
-  if (ultActive && bird.animal === "dog") starProb *= 1.5;
+  if (ultActive && bird.animal === "bee") starProb *= 1.5;
   if (Math.random() < starProb && stars.length < 5) {
     const type = Math.random() < 0.1 ? "blue" : "yellow";
     stars.push({
