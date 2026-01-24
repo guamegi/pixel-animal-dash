@@ -202,7 +202,7 @@ function updateLogic() {
   }
 
   const speed = (3 + level * 0.5) * speedMultiplier + dashEffect;
-  const horizontalDist = Math.max(260, 500 - (level - 1) * 40);
+  const horizontalDist = Math.max(260, 400 - (level - 1) * 40);
 
   if (
     pipes.length === 0 ||
