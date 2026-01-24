@@ -30,9 +30,8 @@ highScoreEl.innerText = highScore;
 
 let audioCtx = null;
 
-/** 1. 모바일 전체 화면 대응 리사이징 함수 **/
+/** 1. 모바일 전체 화면 대응 리사이징 **/
 function resizeCanvas() {
-  const container = document.getElementById("game-container");
   const windowRatio = window.innerWidth / window.innerHeight;
   const gameRatio = canvas.width / canvas.height;
 
@@ -83,7 +82,7 @@ function playSound(type) {
   osc.stop(audioCtx.currentTime + 0.3);
 }
 
-/** 2. 캐릭터 드로잉: 모바일 가시성 개선 (오라 및 투명도 깜빡임) **/
+/** 2. 캐릭터 드로잉: 상태 효과 강화 **/
 function drawBird() {
   const { x, y, width: w, height: h, animal, velocity } = bird;
   let rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 8, velocity * 0.1));
@@ -92,14 +91,11 @@ function drawBird() {
   ctx.translate(x + w / 2, y + h / 2);
   ctx.rotate(rotation);
 
-  // 150ms 단위로 깜빡임 여부 결정
   const blink = Math.floor(Date.now() / 150) % 2 === 0;
 
-  // 무적 혹은 궁극기 상태일 때 캐릭터 뒤에 오라(Aura) 그리기
   if (commonInvincibility > 0 || ultActive) {
     ctx.save();
     ctx.beginPath();
-    // 무적은 빨강, 궁극기는 금색
     const auraColor =
       commonInvincibility > 0
         ? "rgba(255, 50, 50, 0.5)"
@@ -115,7 +111,6 @@ function drawBird() {
     ctx.restore();
   }
 
-  // 무적/궁극기 상태에서 깜빡임 효과 (캐릭터 투명도 조절)
   if ((commonInvincibility > 0 || ultActive) && !blink) {
     ctx.globalAlpha = 0.4;
   }
@@ -126,7 +121,6 @@ function drawBird() {
   ctx.textBaseline = "middle";
   const animals = { chick: "🐤", penguin: "🐧", bird: "🕊️", dog: "🐕" };
 
-  // 가독성을 위한 외곽선
   ctx.strokeStyle = "rgba(255,255,255,0.8)";
   ctx.lineWidth = 2;
   ctx.strokeText(animals[animal], 0, 0);
@@ -274,10 +268,12 @@ function updateLogic() {
   }
 }
 
+/** 3. 게이지 UI 업데이트: 렉 방지를 위해 레이아웃 재계산 최소화 **/
 function updateEnergyUI() {
   gaugeBar.style.width = energy + "%";
   if (energy >= 100) {
     gaugeText.innerText = "MAX";
+    // 끊김 현상 방지를 위해 will-change 속성 활용 가능 (CSS)
     ultButton.classList.add("ready", "ult-ready-animation");
     gaugeBar.classList.add("ult-ready-animation");
   } else {
@@ -292,7 +288,7 @@ function useUltimate() {
   energy = 0;
   updateEnergyUI();
   ultActive = true;
-  commonInvincibility = 60; // 발동 시 1초간 무적 보장
+  commonInvincibility = 60;
   if (bird.animal === "chick") ultTimer = 5 * 60;
   else if (bird.animal === "penguin") ultTimer = 7 * 60;
   else if (bird.animal === "bird") ultTimer = 10 * 60;
@@ -429,10 +425,14 @@ const handleAction = (e) => {
   }
 };
 
+/** 4. 캐릭터 선택 로직 수정: 상하좌우 모든 방향키 대응 **/
 window.addEventListener("keydown", (e) => {
   if (!charSelectUI.classList.contains("hidden")) {
+    // 그리드 구조 (2x2): 0:🐥, 1:🐧 / 2:🕊️, 3:🐕
     if (e.key === "ArrowRight") updateCharSelection((charIndex + 1) % 4);
     if (e.key === "ArrowLeft") updateCharSelection((charIndex + 3) % 4);
+    if (e.key === "ArrowDown") updateCharSelection((charIndex + 2) % 4);
+    if (e.key === "ArrowUp") updateCharSelection((charIndex + 2) % 4);
     if (e.key === "Enter" || e.code === "Space") startGameFlow();
     return;
   }

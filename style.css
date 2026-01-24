@@ -1,7 +1,7 @@
 body {
   margin: 0;
   overflow: hidden;
-  background: #ade1e5;
+  background: #000;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -119,6 +119,7 @@ canvas {
   height: 100%;
   background: #f1c40f;
   transition: width 0.2s;
+  will-change: transform, opacity;
 }
 #gauge-text {
   position: absolute;
@@ -151,6 +152,7 @@ canvas {
   display: none;
   font-size: 24px; /* P 글자를 크게 */
   z-index: 20;
+  will-change: transform, opacity;
 }
 
 #ult-button.ready {
