@@ -139,15 +139,18 @@ function drawBird() {
 
   const blink = Math.floor(Date.now() / 150) % 2 === 0;
 
-  if (commonInvincibility > 0 || ultActive) {
+  // 빨간색 무적 효과 로직 수정
+  // 1. 일반적인 피격 후 무적(commonInvincibility) 상태이거나
+  // 2. 병아리(chick)가 궁극기(ultActive)를 사용 중일 때 빨간색 아우라 표시
+  const showRedAura =
+    commonInvincibility > 0 || (ultActive && animal === "chick");
+
+  if (showRedAura) {
     ctx.save();
     ctx.beginPath();
-    const auraColor =
-      commonInvincibility > 0
-        ? "rgba(255, 50, 50, 0.5)"
-        : "rgba(255, 215, 0, 0.6)";
+    const auraColor = "rgba(255, 50, 50, 0.5)";
     ctx.shadowBlur = 15;
-    ctx.shadowColor = commonInvincibility > 0 ? "red" : "gold";
+    ctx.shadowColor = "red";
     ctx.fillStyle = auraColor;
     if (blink) {
       ctx.arc(0, 0, w * 0.7, 0, Math.PI * 2);
@@ -156,6 +159,8 @@ function drawBird() {
     ctx.restore();
   }
 
+  // 캐릭터 본체의 깜빡임 (투명도 조절)
+  // 모든 무적 상태(공통 무적 또는 궁극기 활성화)에서 깜빡임 유지
   if ((commonInvincibility > 0 || ultActive) && !blink) {
     ctx.globalAlpha = 0.4;
   }
