@@ -163,19 +163,30 @@ function drawBird() {
 
   const blink = Math.floor(Date.now() / 150) % 2 === 0;
 
-  // 빨간색 무적 효과 로직 수정
-  // 1. 일반적인 피격 후 무적(commonInvincibility) 상태이거나
-  // 2. 병아리(chick)가 궁극기(ultActive)를 사용 중일 때 빨간색 아우라 표시
+  // 1. 게이지가 MAX(100)일 때 캐릭터 황금색 깜빡임 효과 (추가)
+  if (energy >= 100 && !ultActive) {
+    ctx.save();
+    ctx.beginPath();
+    // 황금색 아우라 효과
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = "#f1c40f";
+    ctx.fillStyle = "rgba(241, 196, 15, 0.4)";
+    if (blink) {
+      ctx.arc(0, 0, w * 0.65, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // 2. 무적 상태(피격 후 또는 병아리 궁극기) 빨간색 아우라
   const showRedAura =
     commonInvincibility > 0 || (ultActive && animal === "chick");
-
   if (showRedAura) {
     ctx.save();
     ctx.beginPath();
-    const auraColor = "rgba(255, 50, 50, 0.5)";
     ctx.shadowBlur = 15;
     ctx.shadowColor = "red";
-    ctx.fillStyle = auraColor;
+    ctx.fillStyle = "rgba(255, 50, 50, 0.5)";
     if (blink) {
       ctx.arc(0, 0, w * 0.7, 0, Math.PI * 2);
       ctx.fill();
@@ -183,20 +194,28 @@ function drawBird() {
     ctx.restore();
   }
 
-  // 캐릭터 본체의 깜빡임 (투명도 조절)
-  // 모든 무적 상태(공통 무적 또는 궁극기 활성화)에서 깜빡임 유지
-  // if ((commonInvincibility > 0 || ultActive) && !blink) {
-  // ctx.globalAlpha = 0.4;
-  // }
+  // 3. 캐릭터 본체 렌더링
+  if ((commonInvincibility > 0 || ultActive) && !blink) {
+    ctx.globalAlpha = 0.4;
+  }
 
   ctx.scale(-1, 1);
   ctx.font = `${w}px Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   const animals = { chick: "🐤", penguin: "🐧", bird: "🕊️", bee: "🐝" };
-  ctx.strokeStyle = "rgba(255,255,255,0.8)";
-  ctx.lineWidth = 2;
-  ctx.strokeText(animals[animal], 0, 0);
+
+  // 게이지가 찼을 때 캐릭터 텍스트에도 약간의 광택 효과 추가
+  if (energy >= 100 && !ultActive && blink) {
+    ctx.strokeStyle = "#f1c40f";
+    ctx.lineWidth = 3;
+    ctx.strokeText(animals[animal], 0, 0);
+  } else {
+    ctx.strokeStyle = "rgba(255,255,255,0.8)";
+    ctx.lineWidth = 2;
+    ctx.strokeText(animals[animal], 0, 0);
+  }
+
   ctx.fillText(animals[animal], 0, 0);
   ctx.restore();
 }
