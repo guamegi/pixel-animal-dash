@@ -296,8 +296,12 @@ function updateLogic() {
       bird.y = canvas.height - bird.height;
   }
 
-  const speed = (3 + level * 0.5) * speedMultiplier + dashEffect;
-  const horizontalDist = Math.max(260, 500 - (level - 1) * 40);
+  const baseSpeed = 3;
+  const speedIncrease = 0.15; // 레벨당 속도 증가량
+  const speed =
+    (baseSpeed + level * speedIncrease) * speedMultiplier + dashEffect;
+  const gapDecrease = 20; // 레벨당 파이프 간격 감소량(가로)
+  const horizontalDist = Math.max(260, 500 - (level - 1) * gapDecrease);
 
   if (
     pipes.length === 0 ||
