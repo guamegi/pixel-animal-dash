@@ -35,6 +35,30 @@ let ultAudioInterval = null;
 highScoreEl.innerText = highScore;
 let audioCtx = null;
 
+// 캐릭터 정보 데이터
+const charData = {
+  chick: {
+    desc: "5초간 모든 장애물을 무시하는 빨간 무적 보호막 생성!",
+    visual: "🛡️",
+    class: "v-invincible",
+  },
+  penguin: {
+    desc: "시간이 0.7배로 느려져 정밀한 컨트롤이 가능해집니다.",
+    visual: "❄️",
+    class: "v-slow",
+  },
+  bird: {
+    desc: "순간적으로 화면을 돌파하며 이후 2초간 무적 상태!",
+    visual: "⚡",
+    class: "v-dash",
+  },
+  bee: {
+    desc: "몸집이 절반으로 줄고 별 아이템 등장 확률이 증가합니다.",
+    visual: "🍯",
+    class: "v-small",
+  },
+};
+
 function resizeCanvas() {
   const windowRatio = window.innerWidth / window.innerHeight;
   const gameRatio = 400 / 600;
@@ -414,7 +438,7 @@ function draw() {
   }
   if (bird) drawBird();
   const now = Date.now();
-  if (isReady && !gameActive && !isGameOver) drawArrowUI("TAP TO START", "☝️");
+  if (isReady && !gameActive && !isGameOver) drawArrowUI("TAP TO START", "👇");
   else if (isGameOver && now - deathTime > 2000)
     drawArrowUI("TAP TO RETRY", "🔄", true);
   requestAnimationFrame(draw);
@@ -483,6 +507,7 @@ const handleAction = (e) => {
 };
 
 window.addEventListener("keydown", (e) => {
+  // 1. 캐릭터 선택 화면일 때 조작 로직
   if (!charSelectUI.classList.contains("hidden")) {
     if (e.key === "ArrowRight") updateCharSelection((charIndex + 1) % 4);
     if (e.key === "ArrowLeft") updateCharSelection((charIndex + 3) % 4);
@@ -491,7 +516,15 @@ window.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.code === "Space") startGameFlow();
     return;
   }
-  if (e.code === "Space") handleAction(e);
+
+  // 2. 게임 플레이 중 조작 로직
+  if (e.code === "Space") {
+    handleAction(e); // 점프
+  } else if (e.key === "p" || e.key === "P" || e.key === "ㅔ") {
+    // 'p' 키를 눌렀을 때 궁극기 발동 (대소문자 모두 허용)
+    initAudio();
+    useUltimate();
+  }
 });
 
 charItems.forEach((item) => {
@@ -516,8 +549,21 @@ function updateCharSelection(index) {
   charIndex = index;
   charItems.forEach((item, i) => {
     item.classList.toggle("selected", i === charIndex);
-    if (i === charIndex) selectedAnimal = item.dataset.animal;
+    if (i === charIndex) {
+      selectedAnimal = item.dataset.animal;
+      // UI 업데이트 호출
+      updateUltInfo(selectedAnimal);
+    }
   });
+}
+
+function updateUltInfo(animal) {
+  const data = charData[animal];
+  document.getElementById("ult-name").textContent = "궁극기 효과";
+  document.getElementById("ult-desc").textContent = data.desc;
+  const visualEl = document.getElementById("ult-visual");
+  visualEl.textContent = data.visual;
+  visualEl.className = "ult-visual-anim " + data.class;
 }
 
 function startGameFlow() {
@@ -589,3 +635,4 @@ function drawArrowUI(text, emoji, showGameOver = false) {
   ctx.restore();
 }
 drawBackground();
+updateUltInfo("chick");

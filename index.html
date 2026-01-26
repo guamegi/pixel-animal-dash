@@ -28,19 +28,43 @@
 
       <div id="ui-layer">
         <div id="char-select">
-          <h2 style="margin: 0">SELECT HERO</h2>
-          <p style="font-size: 12px; margin: 5px 0">
+          <h2 class="select-title">캐릭터 선택</h2>
+
+          <p style="font-size: 12px; margin-bottom: 25px; color: #ccc">
             Arrows to Move, Space to Start
           </p>
-          <div id="char-grid" class="char-grid">
-            <div class="char-item selected" data-animal="chick" data-index="0">
-              🐤
+          <div
+            class="selection-container"
+            style="display: flex; gap: 20px; align-items: start"
+          >
+            <div id="char-grid" class="char-grid">
+              <div
+                class="char-item selected"
+                data-animal="chick"
+                data-index="0"
+              >
+                🐤
+              </div>
+              <div class="char-item" data-animal="penguin" data-index="1">
+                🐧
+              </div>
+              <div class="char-item" data-animal="bird" data-index="2">🕊️</div>
+              <div class="char-item" data-animal="bee" data-index="3">🐝</div>
             </div>
-            <div class="char-item" data-animal="penguin" data-index="1">🐧</div>
-            <div class="char-item" data-animal="bird" data-index="2">🕊️</div>
-            <div class="char-item" data-animal="bee" data-index="3">🐝</div>
+
+            <div id="char-info-card">
+              <div id="ult-preview-box">
+                <div id="ult-visual" class="ult-visual-anim"></div>
+              </div>
+              <div id="ult-details">
+                <h3 id="ult-name">궁극기 이름</h3>
+                <p id="ult-desc">궁극기 설명이 여기에 표시됩니다.</p>
+                <div class="key-badge">Key: [ P ] or Button</div>
+              </div>
+            </div>
           </div>
-          <button id="confirmBtn" class="game-btn">START</button>
+
+          <button id="confirmBtn" class="game-btn">GAME START</button>
         </div>
       </div>
     </div>
