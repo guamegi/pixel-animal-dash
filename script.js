@@ -574,6 +574,30 @@ function startGameFlow() {
   requestAnimationFrame(draw);
 }
 
+// 모바일 접속 여부 확인 및 텍스트 변경 로직
+function updateControlHeuristic() {
+  const howToControlEl = document.getElementById("howToControl");
+  if (!howToControlEl) return;
+
+  // 터치 가능한 기기(모바일/태블릿)인지 확인
+  const isMobile =
+    /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+    navigator.maxTouchPoints > 0;
+
+  if (isMobile) {
+    // 모바일용 설명으로 교체
+    howToControlEl.innerHTML =
+      "점프: 화면 탭 &nbsp;&nbsp;|&nbsp;&nbsp; 궁극기: [P] 버튼";
+  } else {
+    // PC용 설명 (기본값 유지 또는 재설정)
+    howToControlEl.innerHTML =
+      "점프: 스페이스바 &nbsp;&nbsp;|&nbsp;&nbsp; 궁극기: P";
+  }
+}
+
+// 페이지 로드 시 및 캐릭터 선택창이 뜰 때 실행
+window.addEventListener("load", updateControlHeuristic);
+
 document.getElementById("confirmBtn").addEventListener("pointerdown", (e) => {
   e.stopPropagation();
   startGameFlow();
