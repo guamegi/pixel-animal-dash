@@ -669,16 +669,33 @@ function drawArrowUI(text, emoji, showGameOver = false) {
   ctx.save();
   ctx.fillStyle = "rgba(0,0,0,0.4)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "white";
+
+  // 중앙 정렬 및 선 스타일 공통 설정
   ctx.textAlign = "center";
+  ctx.strokeStyle = "black"; // 테두리 색상: 검정
+  ctx.lineWidth = 4; // 테두리 두께 (조절 가능)
+
+  // 1. 하단 보조 텍스트 (TAP TO START 등)
+  ctx.fillStyle = "rgb(255, 230, 1)";
   ctx.font = "bold 20px Arial";
+  // 테두리를 먼저 그려야 글자 내부색이 테두리에 덮이지 않습니다.
+  ctx.strokeText(text, canvas.width / 2, canvas.height / 2 + 70);
   ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 70);
+
+  // 2. 중앙 이모지
   ctx.font = "50px Arial";
+  ctx.strokeText(emoji, canvas.width / 2, canvas.height / 2 + 20);
   ctx.fillText(emoji, canvas.width / 2, canvas.height / 2 + 20);
+
+  // 3. 게임 오버 텍스트
   if (showGameOver) {
+    ctx.fillStyle = "white";
     ctx.font = "bold 40px Arial";
+    ctx.lineWidth = 6; // 메인 제목이므로 테두리를 조금 더 두껍게 설정
+    ctx.strokeText("GAME OVER", canvas.width / 2, canvas.height / 2 - 80);
     ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 80);
   }
+
   ctx.restore();
 }
 
