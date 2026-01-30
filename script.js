@@ -681,5 +681,23 @@ function drawArrowUI(text, emoji, showGameOver = false) {
   }
   ctx.restore();
 }
+
+// 실제 뷰포트 높이를 계산하여 설정하는 함수
+function setScreenSize() {
+  let vh = window.innerHeight * 0.01;
+  document.documentElement.style.setProperty("--vh", `${vh}px`);
+}
+
+// 화면 크기가 변할 때마다 재계산
+window.addEventListener("resize", setScreenSize);
+
+// 사용자가 다른 앱을 쓰다가 돌아왔을 때(포커스 복귀) 화면을 다시 맞춤
+window.addEventListener("pageshow", (event) => {
+  setScreenSize();
+  // 약간의 지연을 주어 브라우저 UI가 완전히 자리를 잡은 후 다시 계산 (사파리 특유의 버그 대응)
+  setTimeout(setScreenSize, 100);
+});
+
+setScreenSize();
 drawBackground();
 updateUltInfo("chick");
