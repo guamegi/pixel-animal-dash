@@ -945,6 +945,25 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
+const confirmBtn = document.getElementById("confirmBtn");
+
+const handleStartGame = (e) => {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  // 오디오 컨텍스트 활성화 (모바일 필수)
+  initAudio();
+
+  console.log("Game Starting...");
+  startGameFlow();
+};
+
+// 터치와 클릭 모두에 반응하도록 등록
+confirmBtn.addEventListener("pointerdown", handleStartGame);
+confirmBtn.addEventListener("click", handleStartGame);
+
 // 기존 버튼 클릭 이벤트도 유지
 document
   .getElementById("closeTutorialBtn")

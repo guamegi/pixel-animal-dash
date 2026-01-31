@@ -498,6 +498,13 @@ canvas {
   animation: float 2s infinite ease-in-out;
 }
 
+#confirmBtn {
+  position: relative;
+  z-index: 10;
+  pointer-events: auto !important; /* 터치 이벤트를 강제로 허용 */
+  cursor: pointer;
+}
+
 @keyframes float {
   0%,
   100% {
