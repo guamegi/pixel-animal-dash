@@ -51,13 +51,13 @@ const charData = {
   },
   penguin: {
     name: "얼음 땡",
-    desc: "화면의 모든 장애물을 즉시 제거합니다.",
+    desc: "7초간 진행속도를 늦춥니다.",
     visual: "❄️",
-    class: "v-clear",
+    class: "v-slow",
   },
   bird: {
     name: "공중 부양",
-    desc: "하늘을 날 수 있어 장애물을 쉽게 피합니다.",
+    desc: "앞으로 순간이동하고 2초간 무적 상태!",
     visual: "☁️",
     class: "v-fly",
   },
