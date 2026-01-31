@@ -335,7 +335,7 @@ canvas {
 }
 
 .intro-char {
-  font-size: 80px; /* 여러 명이라 조금 조절 */
+  font-size: 50px; /* 여러 명이라 조금 조절 */
   filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
   animation: float 2s infinite ease-in-out;
 }
