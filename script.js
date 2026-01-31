@@ -10,6 +10,12 @@ const gaugeBar = document.getElementById("gauge-bar");
 const gaugeText = document.getElementById("gauge-text");
 const ultButton = document.getElementById("ult-button");
 
+const introScreen = document.getElementById("intro-screen");
+const tutorialModal = document.getElementById("tutorial-modal");
+const closeTutorialBtn = document.getElementById("closeTutorialBtn");
+const skillActor = document.getElementById("skill-actor");
+const skillDesc = document.getElementById("skill-simple-desc");
+
 canvas.width = 400;
 canvas.height = 600;
 
@@ -551,8 +557,9 @@ window.addEventListener("keydown", (e) => {
 });
 
 charItems.forEach((item) => {
-  item.addEventListener("pointerdown", (e) => {
-    updateCharSelection(parseInt(item.getAttribute("data-index")));
+  item.addEventListener("pointerdown", () => {
+    const idx = parseInt(item.getAttribute("data-index"));
+    updateCharSelection(idx);
   });
 });
 
@@ -567,18 +574,6 @@ ultButton.addEventListener(
   },
   { passive: false },
 );
-
-function updateCharSelection(index) {
-  charIndex = index;
-  charItems.forEach((item, i) => {
-    item.classList.toggle("selected", i === charIndex);
-    if (i === charIndex) {
-      selectedAnimal = item.dataset.animal;
-      // UI 업데이트 호출
-      updateUltInfo(selectedAnimal);
-    }
-  });
-}
 
 function updateUltInfo(animal) {
   const data = charData[animal];
@@ -714,6 +709,96 @@ window.addEventListener("pageshow", (event) => {
   // 약간의 지연을 주어 브라우저 UI가 완전히 자리를 잡은 후 다시 계산 (사파리 특유의 버그 대응)
   setTimeout(setScreenSize, 100);
 });
+
+// 인트로 화면: 아무 키나 누르면 튜토리얼 모달 등장
+window.addEventListener(
+  "keydown",
+  function introHandler() {
+    if (!introScreen.classList.contains("hidden")) {
+      introScreen.classList.add("hidden");
+      tutorialModal.classList.remove("hidden");
+      window.removeEventListener("keydown", introHandler);
+    }
+  },
+  { once: false },
+);
+
+// 2. 튜토리얼 모달 닫기 -> 캐릭터 선택 화면
+closeTutorialBtn.addEventListener("click", () => {
+  tutorialModal.classList.add("hidden");
+  charSelectUI.classList.remove("hidden");
+});
+
+// 3. 캐릭터별 스킬 미리보기 업데이트 (기존 updateCharSelection 수정)
+function updateCharSelection(index) {
+  charIndex = index;
+  charItems.forEach((item, i) => {
+    item.classList.toggle("selected", i === charIndex);
+    if (i === charIndex) {
+      selectedAnimal = item.dataset.animal;
+      updateSkillPreview(selectedAnimal);
+    }
+  });
+}
+
+// [기능 1] 인트로에서 아무 키나 누르면 모달로 전환
+function handleIntroInput() {
+  if (!introScreen.classList.contains("hidden")) {
+    introScreen.classList.add("hidden"); // 인트로 숨기기
+    tutorialModal.classList.remove("hidden"); // 조작법 모달 보이기
+
+    // 이벤트 중복 방지를 위해 인트로 핸들러 제거
+    window.removeEventListener("keydown", handleIntroInput);
+    window.removeEventListener("pointerdown", handleIntroInput);
+  }
+}
+
+// 키보드와 마우스/터치 모두 대응
+window.addEventListener("keydown", handleIntroInput);
+window.addEventListener("pointerdown", handleIntroInput);
+
+// [기능 2] 조작법 모달 닫기 로직 (Space, Enter 대응)
+function closeTutorial() {
+  if (!tutorialModal.classList.contains("hidden")) {
+    tutorialModal.classList.add("hidden");
+    charSelectUI.classList.remove("hidden");
+
+    // 캐릭터 선택창 진입 시 첫 번째 캐릭터 스킬 즉시 실행
+    updateSkillPreview("chick");
+  }
+}
+
+// 모달 전용 키 입력 리스너
+window.addEventListener("keydown", (e) => {
+  if (e.code === "Space" || e.key === "Enter") {
+    closeTutorial();
+  }
+});
+
+closeTutorialBtn.addEventListener("click", closeTutorial);
+
+// [기능 3] 캐릭터 선택 및 스킬 프리뷰 (진입 시 자동 실행 보장)
+function updateSkillPreview(animal) {
+  const data = charData[animal];
+  const animals = { chick: "🐤", penguin: "🐧", bird: "🕊️", bee: "🐝" };
+
+  const actor = document.getElementById("ult-visual"); // 기존 ID 사용
+  const name = document.getElementById("ult-name");
+  const desc = document.getElementById("ult-desc");
+
+  if (actor) {
+    actor.textContent = animals[animal];
+    actor.className = "ult-visual-anim " + data.class; // 애니메이션 클래스 부여
+    // 텍스트 업데이트
+    name.innerText = animal.toUpperCase();
+    desc.innerText = data.desc;
+  }
+}
+
+// 기존 버튼 클릭 이벤트도 유지
+document
+  .getElementById("closeTutorialBtn")
+  .addEventListener("click", closeTutorial);
 
 setScreenSize();
 drawBackground();

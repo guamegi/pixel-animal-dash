@@ -27,25 +27,38 @@
       <div id="ult-button">P</div>
 
       <div id="ui-layer">
-        <div id="char-select">
+        <div id="intro-screen" class="full-ui-transparent intro-animate">
+          <div class="intro-content">
+            <h1 class="game-title">ANIMAL DASH</h1>
+            <div class="intro-chars-container">
+              <span class="intro-char">🐤</span>
+              <span class="intro-char">🐧</span>
+              <span class="intro-char">🕊️</span>
+              <span class="intro-char">🐝</span>
+            </div>
+            <div class="press-any-key">PRESS ANY KEY</div>
+          </div>
+        </div>
+
+        <div id="tutorial-modal" class="modal-overlay hidden">
+          <div class="modal-content">
+            <h2>HOW TO PLAY</h2>
+            <div class="tutorial-item">
+              <span class="key">[ SPACE ]</span>
+              <span class="desc">JUMP</span>
+            </div>
+            <div class="tutorial-item">
+              <span class="key">[ P ]</span>
+              <span class="desc">SKILL</span>
+            </div>
+            <!-- <p class="modal-hint">Press Space or Enter to Start</p> -->
+            <button id="closeTutorialBtn" class="game-btn">GOT IT!</button>
+          </div>
+        </div>
+
+        <div id="char-select" class="hidden">
           <h2 class="select-title">SELECT HERO</h2>
-          <span
-            style="
-              font-size: 13px;
-              font-weight: bold;
-              margin-top: 10px;
-              color: #ccc;
-            "
-            >조작방법</span
-          >
-          <span
-            id="howToControl"
-            style="font-size: 11px; margin: 5px 0px 10px 0px; color: #ccc"
-          ></span>
-          <div
-            class="selection-container"
-            style="display: flex; gap: 20px; align-items: start"
-          >
+          <div class="selection-layout">
             <div id="char-grid" class="char-grid">
               <div
                 class="char-item selected"
@@ -61,19 +74,17 @@
               <div class="char-item" data-animal="bee" data-index="3">🐝</div>
             </div>
 
-            <div id="char-info-card">
+            <div id="skill-preview-card">
               <div id="ult-preview-box">
                 <div id="ult-visual" class="ult-visual-anim"></div>
               </div>
               <div id="ult-details">
                 <h3 id="ult-name">스킬 이름</h3>
-                <p id="ult-desc">스킬 설명이 여기에 표시됩니다.</p>
-                <div class="key-badge">Key: [ P ] or Button</div>
+                <p id="ult-desc">스킬 설명</p>
               </div>
             </div>
           </div>
-
-          <button id="confirmBtn" class="game-btn">START</button>
+          <button id="confirmBtn" class="game-btn">START GAME</button>
         </div>
       </div>
     </div>
