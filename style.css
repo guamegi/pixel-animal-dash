@@ -77,14 +77,14 @@ canvas {
 }
 .char-grid {
   display: grid;
-  grid-template-columns: repeat(2, 110px); /* 110px 고정 */
-  grid-template-rows: repeat(2, 110px);
+  grid-template-columns: repeat(3, 80px); /* 2열에서 3열로 확장 */
+  grid-template-rows: repeat(2, 80px);
   gap: 15px;
   flex-shrink: 0;
 }
 .char-item {
-  width: 110px;
-  height: 110px;
+  width: 80px;
+  height: 80px;
   font-size: 50px;
   display: flex;
   justify-content: center;
@@ -335,7 +335,7 @@ canvas {
 }
 
 .intro-char {
-  font-size: 50px; /* 여러 명이라 조금 조절 */
+  font-size: 40px; /* 여러 명이라 조금 조절 */
   filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
   animation: float 2s infinite ease-in-out;
 }
@@ -568,37 +568,67 @@ canvas {
   }
 
   #ult-desc {
-    height: auto;
-    margin: 4px 0;
-    font-size: 11px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2; /* 두 줄만 표시 */
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    margin: 5px auto;
-    max-width: 200px; /* 텍스트가 너무 길어지면 중앙에서 줄바꿈 되도록 설정 */
+    font-size: 12px;
+    min-height: 36px; /* 두 줄 분량의 높이를 미리 확보 */
+    margin: 5px 0 0 0;
+    display: flex;
+    align-items: center; /* 텍스트가 한 줄이어도 세로 중앙 유지 */
+    text-align: center;
   }
 
   /* 1. 세로 배치로 전환 */
   .selection-layout {
     flex-direction: column;
     align-items: center;
-    gap: 20px;
-    min-height: auto; /* 모바일에서는 자연스럽게 늘어나도록 변경 */
+    justify-content: flex-start; /* 상단부터 차례대로 배치 */
+    gap: 0; /* 간격을 gap 대신 margin으로 정밀 조정 */
+    min-height: 330px;
   }
 
   /* 2. 캐릭터 버튼을 가로 한 줄(4열)로 슬림하게 배치 */
   .char-grid {
-    grid-template-columns: repeat(4, 70px);
-    grid-template-rows: 70px;
+    display: grid;
+    grid-template-columns: repeat(3, 75px);
+    grid-template-rows: repeat(2, 75px);
     gap: 10px;
+    flex-basis: 160px; /* 그리드가 차지할 높이를 160px로 명시 */
+    flex-shrink: 0; /* 하단 요소가 커져도 절대 줄어들지 않음 */
+    margin-bottom: 20px; /* 카드와의 간격을 마진으로 고정 */
+    width: 245px;
+    height: 160px;
   }
 
   /* 3. 모바일용 버튼 크기 축소 */
   .char-item {
-    width: 70px;
-    height: 70px;
+    width: 75px;
+    height: 75px;
     font-size: 35px;
+    box-sizing: border-box; /* 테두리가 생겨도 외부 크기가 안 변하게 함 */
+    border: 3px solid transparent; /* 미리 투명 테두리를 그려 공간 확보 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .char-item.selected {
+    border-color: #f1c40f;
+    background: rgba(241, 196, 15, 0.2);
+    transform: none; /* scale(1.1) 등이 있다면 제거하여 주변을 밀어내지 않게 함 */
+  }
+
+  /* 4. 정보 카드 영역 고정 */
+  #char-info-card {
+    width: 280px;
+    height: 180px;
+    overflow: hidden; /* 내용이 넘쳐도 틀을 깨지 않음 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #111;
+    border: 1px solid #333;
+    box-sizing: border-box;
+    flex-shrink: 0; /* 이 영역도 크기가 변하지 않게 고정 */
   }
 
   /* 5. 프리뷰 박스 크기 조절 */

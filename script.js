@@ -44,24 +44,42 @@ let audioCtx = null;
 // 캐릭터 정보 데이터
 const charData = {
   chick: {
-    desc: "5초간 모든 장애물을 무시하는 빨간 무적 보호막 생성!",
+    name: "무적 방어",
+    desc: "5초간 모든 장애물을 무시하는 무적 보호막 생성!",
     visual: "🛡️",
     class: "v-invincible",
   },
   penguin: {
-    desc: "시간이 0.7배로 느려져 정밀한 컨트롤이 가능해집니다.",
+    name: "얼음 땡",
+    desc: "화면의 모든 장애물을 즉시 제거합니다.",
     visual: "❄️",
-    class: "v-slow",
+    class: "v-clear",
   },
   bird: {
-    desc: "순간적으로 화면을 돌파하며 이후 2초간 무적 상태!",
-    visual: "⚡",
-    class: "v-dash",
+    name: "공중 부양",
+    desc: "하늘을 날 수 있어 장애물을 쉽게 피합니다.",
+    visual: "☁️",
+    class: "v-fly",
   },
   bee: {
-    desc: "몸집이 절반으로 줄고 별 아이템 등장 확률이 증가합니다.",
-    visual: "🍯",
+    name: "소형화",
+    desc: "몸집이 작아져 좁은 틈도 통과할 수 있습니다.",
+    visual: "✨",
     class: "v-small",
+  },
+  // 신규 캐릭터 1: 토끼
+  rabbit: {
+    name: "황금 자석",
+    desc: "2초 무적 및 주변의 모든 별과 보석을 자석처럼 끌어당깁니다.",
+    visual: "🧲",
+    class: "v-magnet",
+  },
+  // 신규 캐릭터 2: 말
+  horse: {
+    name: "물방울 보호막",
+    desc: "10초 유지되는 보호막 생성! 장애물에 닿으면 1회 방어 후 소멸.",
+    visual: "🫧",
+    class: "v-bubble",
   },
 };
 
@@ -209,7 +227,14 @@ function drawBird() {
   ctx.font = `${w}px Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  const animals = { chick: "🐤", penguin: "🐧", bird: "🕊️", bee: "🐝" };
+  const animals = {
+    chick: "🐤",
+    penguin: "🐧",
+    bird: "🕊️",
+    bee: "🐝",
+    rabbit: "🐇",
+    horse: "🐴",
+  };
 
   // 게이지가 찼을 때 캐릭터 텍스트에도 약간의 광택 효과 추가
   if (energy >= 100 && !ultActive && blink) {
@@ -220,6 +245,18 @@ function drawBird() {
     ctx.strokeStyle = "rgba(255,255,255,0.8)";
     ctx.lineWidth = 2;
     ctx.strokeText(animals[animal], 0, 0);
+  }
+
+  if (ultActive && animal === "horse") {
+    ctx.save();
+    ctx.beginPath();
+    ctx.strokeStyle = "rgba(100, 200, 255, 0.8)";
+    ctx.lineWidth = 4;
+    ctx.arc(0, 0, w * 0.75, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(100, 200, 255, 0.2)";
+    ctx.fill();
+    ctx.restore();
   }
 
   ctx.fillText(animals[animal], 0, 0);
@@ -280,11 +317,31 @@ function updateLogic() {
     }
 
     if (bird.animal === "penguin") speedMultiplier = 0.7;
+
+    if (bird.animal === "rabbit") {
+      commonInvincibility = 2; // 스킬 지속 시간 동안 무적 유지
+
+      stars.forEach((s) => {
+        // 캐릭터와 별 사이의 거리 계산
+        const dx = bird.x + bird.width / 2 - s.x;
+        const dy = bird.y + bird.height / 2 - s.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // 자석 범위 내에 있으면 끌어당김 (강도 조절 가능)
+        if (dist < 300) {
+          s.x += dx * 0.12;
+          s.y += dy * 0.12;
+        }
+      });
+    }
+
     if (ultTimer <= 0) {
       ultActive = false;
       stopUltSound(); // 사운드 중지
       bird.width = 45;
       bird.height = 45;
+      // 말의 보호막이 시간이 다 되어 사라지는 경우 처리
+      if (bird.animal === "horse") bird.hasBubble = false;
     }
   }
 
@@ -327,13 +384,30 @@ function updateLogic() {
   for (let i = pipes.length - 1; i >= 0; i--) {
     const p = pipes[i];
     p.x -= speed;
+
+    const isInvincible =
+      (ultActive &&
+        (bird.animal === "chick" ||
+          bird.animal === "bird" ||
+          bird.animal === "rabbit")) ||
+      commonInvincibility > 0;
+
     if (
       !isInvincible &&
       bird.x < p.x + p.width &&
       bird.x + bird.width > p.x &&
       (bird.y < p.top || bird.y + bird.height > canvas.height - p.bottom)
-    )
+    ) {
+      // 말(horse) 스킬: 물방울 보호막이 있는 경우
+      if (bird.animal === "horse" && ultActive) {
+        ultActive = false; // 보호막 소멸
+        stopUltSound();
+        commonInvincibility = 60; // 충돌 직후 짧은 무적 시간 부여 (중복 충돌 방지)
+        playSound("hit"); // 혹은 보호막 깨지는 소리
+        continue; // 게임오버 건너뛰고 파이프 통과
+      }
       return gameOver();
+    }
 
     if (!p.passed && bird.x > p.x + p.width) {
       score++;
@@ -404,6 +478,10 @@ function useUltimate() {
 
   if (bird.animal === "bird") {
     ultTimer = 30;
+  } else if (bird.animal === "rabbit") {
+    ultTimer = 120; // 토끼 자석은 2초 (60fps 기준)
+  } else if (bird.animal === "horse") {
+    ultTimer = 600; // 말 보호막은 10초
   } else {
     ultTimer =
       bird.animal === "chick" ? 300 : bird.animal === "penguin" ? 420 : 600;
@@ -516,15 +594,31 @@ function gameOver() {
 }
 
 const handleAction = (e) => {
-  if (e.type === "keydown" && e.code !== "Space") return;
+  // UI가 하나라도 열려 있다면 게임 조작(점프) 로직을 실행하지 않고 리턴합니다.
+  if (
+    !charSelectUI.classList.contains("hidden") ||
+    !tutorialModal.classList.contains("hidden") ||
+    !introScreen.classList.contains("hidden")
+  ) {
+    return;
+  }
+
+  // 키보드 입력인데 Space가 아니면 무시
+  if (e.type === "keydown") {
+    if (e.code !== "Space") return; // 점프는 Space로만
+  }
+  // 스킬 버튼 클릭 시 점프 방지
   if (e.target === ultButton) return;
+
   if (e.cancelable) e.preventDefault();
   initAudio();
+
   if (isGameOver && Date.now() - deathTime > 2000) {
     initGame();
     isReady = true;
     return;
   }
+
   if (isReady && !gameActive) {
     gameActive = true;
     bird.velocity = bird.jump;
@@ -535,26 +629,8 @@ const handleAction = (e) => {
   }
 };
 
-window.addEventListener("keydown", (e) => {
-  // 1. 캐릭터 선택 화면일 때 조작 로직
-  if (!charSelectUI.classList.contains("hidden")) {
-    if (e.key === "ArrowRight") updateCharSelection((charIndex + 1) % 4);
-    if (e.key === "ArrowLeft") updateCharSelection((charIndex + 3) % 4);
-    if (e.key === "ArrowDown" || e.key === "ArrowUp")
-      updateCharSelection((charIndex + 2) % 4);
-    if (e.key === "Enter" || e.code === "Space") startGameFlow();
-    return;
-  }
-
-  // 2. 게임 플레이 중 조작 로직
-  if (e.code === "Space") {
-    handleAction(e); // 점프
-  } else if (e.key === "p" || e.key === "P" || e.key === "ㅔ") {
-    // 'p' 키를 눌렀을 때 스킬 발동 (대소문자 모두 허용)
-    initAudio();
-    useUltimate();
-  }
-});
+// 기존에 흩어져 있던 리스너들을 정리하고 하나로 통합합니다.
+window.addEventListener("keydown", handleAction); // 게임 플레이 점프용
 
 charItems.forEach((item) => {
   item.addEventListener("pointerdown", () => {
@@ -615,11 +691,6 @@ function updateControlHeuristic() {
 
 // 페이지 로드 시 및 캐릭터 선택창이 뜰 때 실행
 window.addEventListener("load", updateControlHeuristic);
-
-document.getElementById("confirmBtn").addEventListener("pointerdown", (e) => {
-  e.stopPropagation();
-  startGameFlow();
-});
 
 const bgAssets = {
   clouds: [
@@ -710,33 +781,25 @@ window.addEventListener("pageshow", (event) => {
   setTimeout(setScreenSize, 100);
 });
 
-// 인트로 화면: 아무 키나 누르면 튜토리얼 모달 등장
-window.addEventListener(
-  "keydown",
-  function introHandler() {
-    if (!introScreen.classList.contains("hidden")) {
-      introScreen.classList.add("hidden");
-      tutorialModal.classList.remove("hidden");
-      window.removeEventListener("keydown", introHandler);
-    }
-  },
-  { once: false },
-);
-
 // 2. 튜토리얼 모달 닫기 -> 캐릭터 선택 화면
 closeTutorialBtn.addEventListener("click", () => {
   tutorialModal.classList.add("hidden");
   charSelectUI.classList.remove("hidden");
 });
 
-// 3. 캐릭터별 스킬 미리보기 업데이트 (기존 updateCharSelection 수정)
+// 3. 캐릭터별 스킬 미리보기 업데이트
 function updateCharSelection(index) {
-  charIndex = index;
-  charItems.forEach((item, i) => {
-    item.classList.toggle("selected", i === charIndex);
-    if (i === charIndex) {
-      selectedAnimal = item.dataset.animal;
+  const items = document.querySelectorAll(".char-item");
+  if (index < 0 || index >= items.length) return;
+
+  charIndex = index; // 인덱스 전역 변수 동기화
+  items.forEach((item, i) => {
+    if (i === index) {
+      item.classList.add("selected");
+      selectedAnimal = item.getAttribute("data-animal");
       updateSkillPreview(selectedAnimal);
+    } else {
+      item.classList.remove("selected");
     }
   });
 }
@@ -748,8 +811,8 @@ function handleIntroInput() {
     tutorialModal.classList.remove("hidden"); // 조작법 모달 보이기
 
     // 이벤트 중복 방지를 위해 인트로 핸들러 제거
-    window.removeEventListener("keydown", handleIntroInput);
-    window.removeEventListener("pointerdown", handleIntroInput);
+    // window.removeEventListener("keydown", handleIntroInput);
+    // window.removeEventListener("pointerdown", handleIntroInput);
   }
 }
 
@@ -772,10 +835,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }, 2000);
 });
 
-// 키보드와 마우스/터치 모두 대응
-// window.addEventListener("keydown", handleIntroInput);
-// window.addEventListener("pointerdown", handleIntroInput);
-
 // [기능 2] 조작법 모달 닫기 로직 (Space, Enter 대응)
 function closeTutorial() {
   if (!tutorialModal.classList.contains("hidden")) {
@@ -787,10 +846,54 @@ function closeTutorial() {
   }
 }
 
-// 모달 전용 키 입력 리스너
+// [통합] 캐릭터 선택 및 게임 시작 키보드 핸들러
+// 파일 하단의 기존 keydown 리스너들을 모두 지우고 이 코드를 넣으세요.
 window.addEventListener("keydown", (e) => {
-  if (e.code === "Space" || e.key === "Enter") {
-    closeTutorial();
+  // 1. 인트로 화면 처리
+  if (!introScreen.classList.contains("hidden")) {
+    handleIntroInput();
+    return;
+  }
+
+  // 2. 튜토리얼 모달 처리
+  if (!tutorialModal.classList.contains("hidden")) {
+    if (e.code === "Space" || e.key === "Enter") {
+      e.preventDefault();
+      closeTutorial();
+    }
+    return;
+  }
+
+  // 3. 캐릭터 선택 화면 처리
+  if (!charSelectUI.classList.contains("hidden")) {
+    const totalChars = Object.keys(charData).length;
+    const cols = 3;
+
+    if (
+      ["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(
+        e.code,
+      )
+    ) {
+      e.preventDefault(); // 스크롤 방지
+    }
+
+    if (e.key === "ArrowRight") {
+      charIndex = (charIndex + 1) % totalChars;
+    } else if (e.key === "ArrowLeft") {
+      charIndex = (charIndex - 1 + totalChars) % totalChars;
+    } else if (e.key === "ArrowDown") {
+      if (charIndex + cols < totalChars) charIndex += cols;
+    } else if (e.key === "ArrowUp") {
+      if (charIndex - cols >= 0) charIndex -= cols;
+    } else if (e.key === "Enter" || e.code === "Space") {
+      // 엔터나 스페이스 시 게임 시작 실행
+      e.preventDefault();
+      startGameFlow(); // 직접 시작 함수 호출 (안정성 확보)
+      return;
+    } else {
+      return;
+    }
+    updateCharSelection(charIndex);
   }
 });
 
@@ -799,7 +902,14 @@ closeTutorialBtn.addEventListener("click", closeTutorial);
 // [기능 3] 캐릭터 선택 및 스킬 프리뷰 (진입 시 자동 실행 보장)
 function updateSkillPreview(animal) {
   const data = charData[animal];
-  const animals = { chick: "🐤", penguin: "🐧", bird: "🕊️", bee: "🐝" };
+  const animals = {
+    chick: "🐤",
+    penguin: "🐧",
+    bird: "🕊️",
+    bee: "🐝",
+    rabbit: "🐇",
+    horse: "🐴",
+  };
 
   const actor = document.getElementById("ult-visual"); // 기존 ID 사용
   const name = document.getElementById("ult-name");
@@ -812,7 +922,28 @@ function updateSkillPreview(animal) {
     name.innerText = animal.toUpperCase();
     desc.innerText = data.desc;
   }
+  /*
+  if (actor) {
+    // 만약 mp4 영상을 적용하신다면 actor.innerHTML = `<video...>` 형태로 수정하게 됩니다.
+    actor.textContent = animals[animal]; 
+    actor.className = "ult-visual-anim " + (data.class || "");
+  }
+  */
+  if (name) name.textContent = data.name;
+  if (desc) desc.textContent = data.desc;
 }
+
+window.addEventListener("keydown", (e) => {
+  // 게임이 활성 상태일 때만 작동
+  if (gameActive && !isGameOver) {
+    // 영문 'P'와 한글 입력 상태의 'ㅔ' 모두 대응
+    if (e.key.toLowerCase() === "p" || e.key === "ㅔ") {
+      e.preventDefault();
+      initAudio();
+      useUltimate(); // 스킬 발동 함수 호출
+    }
+  }
+});
 
 // 기존 버튼 클릭 이벤트도 유지
 document
