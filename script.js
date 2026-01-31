@@ -753,9 +753,28 @@ function handleIntroInput() {
   }
 }
 
+// 로딩 시스템(Loading... -> 인트로 화면)
+document.addEventListener("DOMContentLoaded", () => {
+  const loadingScreen = document.getElementById("loading-screen");
+  const introScreen = document.getElementById("intro-screen");
+
+  // 1. 페이지 로드 후 2초 대기
+  setTimeout(() => {
+    // 2. 로딩 화면 숨기기
+    loadingScreen.classList.add("hidden");
+
+    // 3. 인트로 화면 나타내기
+    introScreen.classList.remove("hidden");
+
+    // 4. 인트로 화면이 나타난 후에만 키 입력/클릭 리스너 작동
+    window.addEventListener("keydown", handleIntroInput);
+    window.addEventListener("pointerdown", handleIntroInput);
+  }, 2000);
+});
+
 // 키보드와 마우스/터치 모두 대응
-window.addEventListener("keydown", handleIntroInput);
-window.addEventListener("pointerdown", handleIntroInput);
+// window.addEventListener("keydown", handleIntroInput);
+// window.addEventListener("pointerdown", handleIntroInput);
 
 // [기능 2] 조작법 모달 닫기 로직 (Space, Enter 대응)
 function closeTutorial() {

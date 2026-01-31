@@ -508,6 +508,38 @@ canvas {
   }
 }
 
+/* [추가] 로딩 화면 스타일 (오락실 느낌) */
+.full-ui-black {
+  position: fixed; /* absolute보다 fixed가 화면 전체를 덮기에 안전합니다 */
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* 매우 높은 값으로 설정 */
+}
+
+.loading-text {
+  color: #fff;
+  font-family: "Courier New", Courier, monospace; /* 비트 느낌 폰트 */
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 5px;
+  animation: loading-blink 0.5s infinite alternate;
+}
+
+@keyframes loading-blink {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.3;
+  }
+}
+
 /* [추가] 모바일 반응형 디자인 */
 @media (max-width: 600px) {
   #char-select {
