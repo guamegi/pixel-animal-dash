@@ -21,7 +21,7 @@ let score, level, gameActive, isReady, isGameOver, pipes, stars, bird;
 let selectedAnimal = "chick";
 let charIndex = 0;
 let deathTime = 0;
-let highScore = localStorage.getItem("pixelDash_highScore") || 0;
+let highScore = localStorage.getItem("animalDash_highScore") || 0;
 
 let energy = 0;
 let ultActive = false;
@@ -29,7 +29,7 @@ let ultTimer = 0;
 let ultTotalStartTime = 0;
 let commonInvincibility = 0;
 
-// 궁극기 사운드 루프용 변수
+// 스킬 사운드 루프용 변수
 let ultAudioInterval = null;
 
 highScoreEl.innerText = highScore;
@@ -114,7 +114,7 @@ function playSound(type) {
     );
     gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
   } else if (type === "ult_loop") {
-    // 궁극기 사용 중 배경음
+    // 스킬 사용 중 배경음
     osc.type = "square";
 
     // 주파수를 아주 넓은 범위에서 무작위로 설정 (요란함의 핵심)
@@ -135,7 +135,7 @@ function playSound(type) {
   osc.stop(audioCtx.currentTime + 0.3);
 }
 
-// 궁극기 사운드 루프 시작
+// 스킬 사운드 루프 시작
 function startUltSound() {
   if (ultAudioInterval) clearInterval(ultAudioInterval);
   // 0.15초 -> 0.05초로 변경 (초당 20번의 사운드 발생)
@@ -145,7 +145,7 @@ function startUltSound() {
   }, 50);
 }
 
-// 궁극기 사운드 루프 정지
+// 스킬 사운드 루프 정지
 function stopUltSound() {
   if (ultAudioInterval) {
     clearInterval(ultAudioInterval);
@@ -178,7 +178,7 @@ function drawBird() {
     ctx.restore();
   }
 
-  // 2. 무적 상태(피격 후 또는 병아리 궁극기) 빨간색 아우라
+  // 2. 무적 상태(피격 후 또는 병아리 스킬) 빨간색 아우라
   const showRedAura =
     commonInvincibility > 0 || (ultActive && animal === "chick");
   if (showRedAura) {
@@ -239,7 +239,7 @@ function updateLogic() {
   let speedMultiplier = 1;
   let dashEffect = 0;
 
-  // 궁극기 활성화 로직
+  // 스킬 활성화 로직
   if (ultActive) {
     ultTimer--;
 
@@ -410,7 +410,7 @@ function drawBackground() {
 
   // --- 배경색 결정 (깜빡임 로직) ---
   if (ultActive) {
-    // 궁극기 사용 중: 요란한 사운드에 맞춰 배경도 무작위 색상으로 깜빡임
+    // 스킬 사용 중: 요란한 사운드에 맞춰 배경도 무작위 색상으로 깜빡임
     const hue = Math.floor(Math.random() * 360);
     // 밝고 강렬한 색상으로 설정 (채도 80%, 밝기 60%)
     ctx.fillStyle = `hsl(${hue}, 80%, 60%)`;
@@ -504,7 +504,7 @@ function gameOver() {
   playSound("hit");
   if (score > highScore) {
     highScore = score;
-    localStorage.setItem("pixelDash_highScore", highScore);
+    localStorage.setItem("animalDash_highScore", highScore);
     highScoreEl.innerText = highScore;
   }
 }
@@ -544,7 +544,7 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Space") {
     handleAction(e); // 점프
   } else if (e.key === "p" || e.key === "P" || e.key === "ㅔ") {
-    // 'p' 키를 눌렀을 때 궁극기 발동 (대소문자 모두 허용)
+    // 'p' 키를 눌렀을 때 스킬 발동 (대소문자 모두 허용)
     initAudio();
     useUltimate();
   }
@@ -582,7 +582,7 @@ function updateCharSelection(index) {
 
 function updateUltInfo(animal) {
   const data = charData[animal];
-  document.getElementById("ult-name").textContent = "궁극기 효과";
+  document.getElementById("ult-name").textContent = "스킬 효과";
   document.getElementById("ult-desc").textContent = data.desc;
   const visualEl = document.getElementById("ult-visual");
   visualEl.textContent = data.visual;
@@ -610,11 +610,11 @@ function updateControlHeuristic() {
   if (isMobile) {
     // 모바일용 설명으로 교체
     howToControlEl.innerHTML =
-      "점프: 화면 탭 &nbsp;&nbsp;|&nbsp;&nbsp; 궁극기: [P] 버튼";
+      "점프: 화면 탭 &nbsp;&nbsp;|&nbsp;&nbsp; 스킬: [P] 버튼";
   } else {
     // PC용 설명 (기본값 유지 또는 재설정)
     howToControlEl.innerHTML =
-      "점프: 스페이스바 &nbsp;&nbsp;|&nbsp;&nbsp; 궁극기: P";
+      "점프: 스페이스바 &nbsp;&nbsp;|&nbsp;&nbsp; 스킬: P";
   }
 }
 
